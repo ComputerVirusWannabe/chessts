@@ -1,26 +1,31 @@
 import React, { useContext, useRef, useState } from 'react';
-import Piece from './Piece';
+import Piece, {type PieceRefType} from './Piece';
 import { ThemeContext } from './context/ThemeContext';
 import { v4 as uuidv4 } from 'uuid';
-import { getLegalMoves, type ChessPiece, type Board as BoardType } from './moveGenerators';
 import './App.css';
 
-// Type for piece selection pair
+// Types
 type PieceLocation = {
   id: string;
   location: number;
-}
+};
 
 type PiecePair = {
   source: PieceLocation | null;
   target: PieceLocation | null;
-}
+};
 
-// Type for ThemeContext
 type ThemeContextType = {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
-}
+};
+
+type ChessPiece = {
+  id: string;
+  name: string;
+  color: string;
+  hasMoved?: boolean;
+};
 
 const boardGridStyle: React.CSSProperties = {
   display: 'grid',
@@ -32,7 +37,6 @@ const boardGridStyle: React.CSSProperties = {
   gap: '1px',
 };
 
-
 const Board: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext) as ThemeContextType;
 
@@ -41,11 +45,11 @@ const Board: React.FC = () => {
   const [playerTurn, setPlayerTurn] = useState<'red' | 'grey'>('red');
   const [pair, setPair] = useState<PiecePair>({ source: null, target: null });
 
-  const arrayOfChildRefs = useRef<any[]>([]); // TODO: Replace `any` with the actual Piece ref type
+  const arrayOfChildRefs = useRef<(PieceRefType | null)[]>([]);
 
   const [pieces, setPieces] = useState<ChessPiece[]>([
     // Row 1 (Red pieces)
-    { id: uuidv4(), name: 'Rook', color: 'red'},
+    { id: uuidv4(), name: 'Rook', color: 'red' },
     { id: uuidv4(), name: 'Knight', color: 'red' },
     { id: uuidv4(), name: 'Bishop', color: 'red' },
     { id: uuidv4(), name: 'Queen', color: 'red' },
@@ -62,7 +66,7 @@ const Board: React.FC = () => {
     { id: uuidv4(), name: 'Pawn', color: 'red' },
     { id: uuidv4(), name: 'Pawn', color: 'red' },
 
-    // Rows 3–6 (Empty spaces)
+    // Empty middle rows
     ...Array(32).fill(null).map(() => ({
       id: uuidv4(),
       name: 'Empty',
@@ -101,36 +105,48 @@ const Board: React.FC = () => {
       : (isLightSquare ? '#f0d9b5' : '#b58863');
   };
 
+  const getPieces = () => ({
+    pieces,
+    selectedId: selectedId ?? undefined,
+  });
 
   const handlePieceClick = (clicked_id: string, clicked_location: number) => {
     const clickedPiece = { ...pieces[clicked_location], location: clicked_location };
-    
-    setSelectedId(null);
-    setLegalMoves([]);
-  
+
+    // First click — selecting a piece
     if (pair.source === null) {
       if (clickedPiece.name === 'Empty') return;
       if (clickedPiece.color !== playerTurn) return;
-  
+
       setPair({ source: { id: clicked_id, location: clicked_location }, target: null });
       setSelectedId(clicked_location);
-  
-      const legal = getLegalMoves(clickedPiece, pieces.map((p, idx) => ({ ...p, location: idx })));
+
+      // Instead of getLegalMoves from moveGenerator.ts, use the Piece's own method
+      const pieceRef = arrayOfChildRefs.current[clicked_location];
+      const legal = pieceRef?.getLegitimatePaths?.() || [];
       setLegalMoves(legal);
-  
-    } else if (pair.target === null) {
+    }
+    // Second click — selecting target square
+    else {
       setPair({ ...pair, target: { id: clicked_id, location: clicked_location } });
-      const sourcePiece = { ...pieces[pair.source.location], location: pair.source.location };
-      const legitimatePaths = getLegalMoves(sourcePiece, pieces.map((p, idx) => ({ ...p, location: idx })));
-  
+
+      const sourceLocation = pair.source.location;
+      const pieceRef = arrayOfChildRefs.current[sourceLocation];
+      const legitimatePaths = pieceRef?.getLegitimatePaths?.() || [];
+
       if (legitimatePaths.includes(clicked_location)) {
         const newPieces = [...pieces];
-        newPieces[clicked_location] = pieces[pair.source.location];
-        newPieces[pair.source.location] = { id: `${pair.source.location}`, name: 'Empty', color: 'green', hasMoved: false };
+        newPieces[clicked_location] = pieces[sourceLocation];
+        newPieces[sourceLocation] = {
+          id: `${sourceLocation}`,
+          name: 'Empty',
+          color: 'green',
+          hasMoved: false,
+        };
         setPieces(newPieces);
         setPlayerTurn(playerTurn === 'red' ? 'grey' : 'red');
       }
-  
+
       setPair({ source: null, target: null });
       setSelectedId(null);
       setLegalMoves([]);
@@ -163,8 +179,8 @@ const Board: React.FC = () => {
                 color={piece.color}
                 location={index}
                 onPieceClick={handlePieceClick}
+                getAllPiecesFromBoard={getPieces}
                 ref={(el) => (arrayOfChildRefs.current[index] = el)}
-                //board={pieces.map((p, idx) => ({ ...p, location: idx }))}
               />
             </div>
           ))}

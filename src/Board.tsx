@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import Piece, {type PieceRefType} from './Piece';
 import { ThemeContext } from './context/ThemeContext';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,8 +31,9 @@ const boardGridStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(8, 1fr)',
   gridTemplateRows: 'repeat(8, 1fr)',
-  width: '1500px',
-  height: '1500px',
+  //width: '1000px',
+ //height: '1000px',
+  margin: '20px auto',
   border: '2px solid black',
   gap: '1px',
 };
@@ -49,7 +50,7 @@ const Board: React.FC = () => {
 
   const [pieces, setPieces] = useState<ChessPiece[]>([
     // Row 1 (Red pieces)
-    { id: uuidv4(), name: 'Rook', color: 'red' },
+    { id: uuidv4(), name: 'Rook', color: 'red', },
     { id: uuidv4(), name: 'Knight', color: 'red' },
     { id: uuidv4(), name: 'Bishop', color: 'red' },
     { id: uuidv4(), name: 'Queen', color: 'red' },
@@ -104,6 +105,8 @@ const Board: React.FC = () => {
       ? (isLightSquare ? '#769656' : '#EEEED2')
       : (isLightSquare ? '#f0d9b5' : '#b58863');
   };
+
+
 
   const getPieces = () => ({
     pieces,

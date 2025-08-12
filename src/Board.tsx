@@ -20,52 +20,57 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
-type ChessPiece = {
+export type ChessPiece = {
   id: string;
   name: string;
   color: string;
   hasMoved?: boolean;
+  playerId?: 'player1' | 'player2'; // game logic
 };
 
 const boardGridStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(8, 1fr)',
   gridTemplateRows: 'repeat(8, 1fr)',
-  //width: '1000px',
- //height: '1000px',
+  width: '90%',
+  height: '90vw',
+  maxWidth: '600px',
+  maxHeight: '600px',
   margin: '20px auto',
   border: '2px solid black',
-  gap: '1px',
+  // gap: '1px',
 };
+
+
 
 const Board: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext) as ThemeContextType;
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [legalMoves, setLegalMoves] = useState<number[]>([]);
-  const [playerTurn, setPlayerTurn] = useState<'red' | 'grey'>('red');
+  const [playerTurn, setPlayerTurn] = useState<'red' | 'grey'>('grey');
   const [pair, setPair] = useState<PiecePair>({ source: null, target: null });
 
   const arrayOfChildRefs = useRef<(PieceRefType | null)[]>([]);
 
   const [pieces, setPieces] = useState<ChessPiece[]>([
     // Row 1 (Red pieces)
-    { id: uuidv4(), name: 'Rook', color: 'red', },
-    { id: uuidv4(), name: 'Knight', color: 'red' },
-    { id: uuidv4(), name: 'Bishop', color: 'red' },
-    { id: uuidv4(), name: 'Queen', color: 'red' },
-    { id: uuidv4(), name: 'King', color: 'red' },
-    { id: uuidv4(), name: 'Bishop', color: 'red' },
-    { id: uuidv4(), name: 'Knight', color: 'red' },
-    { id: uuidv4(), name: 'Rook', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
-    { id: uuidv4(), name: 'Pawn', color: 'red' },
+    { id: uuidv4(), name: 'Rook', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Knight', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Bishop', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Queen', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'King', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Bishop', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Knight', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Rook', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1'},
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
 
     // Empty middle rows
     ...Array(32).fill(null).map(() => ({
@@ -75,22 +80,22 @@ const Board: React.FC = () => {
     })),
 
     // Row 7 (Grey pawns)
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' },
-    { id: uuidv4(), name: 'Rook', color: 'grey' },
-    { id: uuidv4(), name: 'Knight', color: 'grey' },
-    { id: uuidv4(), name: 'Bishop', color: 'grey' },
-    { id: uuidv4(), name: 'Queen', color: 'grey' },
-    { id: uuidv4(), name: 'King', color: 'grey' },
-    { id: uuidv4(), name: 'Bishop', color: 'grey' },
-    { id: uuidv4(), name: 'Knight', color: 'grey' },
-    { id: uuidv4(), name: 'Rook', color: 'grey' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2'},
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Rook', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Knight', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Bishop', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Queen', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'King', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Bishop', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Knight', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Rook', color: 'grey' , playerId: 'player2' },
   ]);
 
   const getSquareColor = (index: number): string => {
@@ -162,6 +167,9 @@ const Board: React.FC = () => {
         DEBUG AREA
         <p>Pair: {JSON.stringify(pair)}</p>
         <h4>Current Turn: {playerTurn}</h4>
+        <button onClick={toggleTheme}>
+          Toggle Theme (current: {theme})
+        </button>
       </div>
       <div>
         <h3>Chess Board</h3>
@@ -174,6 +182,8 @@ const Board: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
+                border: '1px solid black',
+                boxSizing: 'border-box',
               }}
             >
               <Piece
@@ -188,9 +198,7 @@ const Board: React.FC = () => {
             </div>
           ))}
         </div>
-        <button onClick={toggleTheme}>
-          Toggle Theme (current: {theme})
-        </button>
+        
       </div>
     </>
   );

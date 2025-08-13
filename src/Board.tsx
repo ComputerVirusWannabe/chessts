@@ -175,6 +175,7 @@ const Board: React.FC = () => {
         <h3>Chess Board</h3>
         <div style={boardGridStyle}>
           {pieces.map((piece, index) => (
+            console.log('Rendering piece at index:', index, 'with id:', piece.id),
             <div
               key={index}
               style={{
@@ -196,7 +197,9 @@ const Board: React.FC = () => {
                 ref={(el) => (arrayOfChildRefs.current[index] = el)}
               />
             </div>
-          ))}
+          )
+          
+          )}
         </div>
         
       </div>

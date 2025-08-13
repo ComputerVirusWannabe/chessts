@@ -9,7 +9,6 @@ type PiecePropsType = {
   color: string; // purely visual
   name: string;
   location: number;
-  legitimatePaths?: number[];
   onPieceClick: (id: string, location: number) => void;
   getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
   ref?: React.Ref<any>;
@@ -31,7 +30,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
 
   const onBoard = (pos: number) => pos >= 0 && pos < 64;
-
+/*
   // Assign player based on starting location
   useEffect(() => {
     if (props.location >= 0 && props.location < 16) {
@@ -42,7 +41,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
       console.error('Invalid location for player assignment');
     }
   }, [props.location]);
-
+*/
   const calculateRookLegitimatePaths = (loc: number) => {
     const allPieces = props.getAllPiecesFromBoard ? props.getAllPiecesFromBoard() : { pieces: [] };
     const { pieces } = allPieces;
@@ -150,8 +149,33 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     setColor(props.color);
     setName(props.name);
     setLocation(props.location);
+    //console.log(" recalculating legitimate paths since props for this piece has change", props.name, "at location", props.location);
     calculateLegitimatePaths(props.name);
   }, [props]);
+
+  /*
+type PiecePropsType = {
+  id: string;
+  color: string; // purely visual
+  name: string;
+  location: number;
+  legitimatePaths?: number[];
+  onPieceClick: (id: string, location: number) => void;
+  getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
+  ref?: React.Ref<any>;
+};
+  */
+
+/*
+                id={piece.id}
+                name={piece.name}
+                color={piece.color}
+                location={index}
+                onPieceClick={handlePieceClick}
+                getAllPiecesFromBoard={getPieces}
+                ref={(el) => (arrayOfChildRefs.current[index] = el)}
+*/
+
 
   useImperativeHandle(props.ref, () => ({
     getName: () => props.name,
@@ -166,12 +190,12 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     border: 'none',
     fontWeight: 'bold'
   };
-
+// {legitimatePaths ? `Legit: ${legitimatePaths.join(', ')}` : 'No Legit Moves'}
   return (
     <div className="card">
       <button onClick={() => props.onPieceClick(id, location)} style={styles}>
-        {name} ({id}) - {location}
-        {legitimatePaths ? `Legit: ${legitimatePaths.join(', ')}` : 'No Legit Moves'}
+        {name} at {location}
+        
       </button>
     </div>
   );

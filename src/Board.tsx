@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Piece, {type PieceRefType} from './Piece';
 import { ThemeContext } from './context/ThemeContext';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,7 +25,7 @@ export type ChessPiece = {
   name: string;
   color: string;
   hasMoved?: boolean;
-  playerId?: 'player1' | 'player2'; // game logic
+  player: 'player1' | 'player2' | 'none'; // game logic
 };
 
 const boardGridStyle: React.CSSProperties = {
@@ -42,7 +42,6 @@ const boardGridStyle: React.CSSProperties = {
 };
 
 
-
 const Board: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext) as ThemeContextType;
 
@@ -55,47 +54,94 @@ const Board: React.FC = () => {
 
   const [pieces, setPieces] = useState<ChessPiece[]>([
     // Row 1 (Red pieces)
-    { id: uuidv4(), name: 'Rook', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Knight', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Bishop', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Queen', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'King', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Bishop', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Knight', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Rook', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1'},
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
-    { id: uuidv4(), name: 'Pawn', color: 'red', playerId: 'player1' },
+    { id: uuidv4(), name: 'Rook', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Knight', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Bishop', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Queen', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'King', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Bishop', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Knight', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Rook', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1'},
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+    { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
 
     // Empty middle rows
+    /*
+  id: string;
+  name: string;
+  color: string;
+  hasMoved?: boolean;
+  player: 'player1' | 'player2' | 'none'; // game logic
+    */
+   // make 32 empty squares
+    // Row 2 to Row 6 (Empty squares)
+   /*
     ...Array(32).fill(null).map(() => ({
       id: uuidv4(),
       name: 'Empty',
       color: 'green',
+      player: 'none', // No player for empty squares
     })),
-
+*/
     // Row 7 (Grey pawns)
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2'},
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Pawn', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Rook', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Knight', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Bishop', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Queen', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'King', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Bishop', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Knight', color: 'grey' , playerId: 'player2' },
-    { id: uuidv4(), name: 'Rook', color: 'grey' , playerId: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2'},
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Rook', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Knight', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Bishop', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Queen', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'King', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Bishop', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Knight', color: 'grey' , player: 'player2' },
+    { id: uuidv4(), name: 'Rook', color: 'grey' , player: 'player2' },
   ]);
 
   const getSquareColor = (index: number): string => {
@@ -111,16 +157,21 @@ const Board: React.FC = () => {
       : (isLightSquare ? '#f0d9b5' : '#b58863');
   };
 
+  const getPieces = useMemo(() => ({
+    pieces,
+    selectedId: selectedId ?? undefined,
+  }), [pieces, selectedId]); // Dependencies
 
-
+  /*
   const getPieces = () => ({
     pieces,
     selectedId: selectedId ?? undefined,
   });
+*/
 
   const handlePieceClick = (clicked_id: string, clicked_location: number) => {
     const clickedPiece = { ...pieces[clicked_location], location: clicked_location };
-
+    console.log('******************** Clicked piece:', clickedPiece);
     // First click — selecting a piece
     if (pair.source === null) {
       if (clickedPiece.name === 'Empty') return;
@@ -149,6 +200,7 @@ const Board: React.FC = () => {
           id: `${sourceLocation}`,
           name: 'Empty',
           color: 'green',
+          player: 'none',  //?????????????
           hasMoved: false,
         };
         setPieces(newPieces);
@@ -175,7 +227,7 @@ const Board: React.FC = () => {
         <h3>Chess Board</h3>
         <div style={boardGridStyle}>
           {pieces.map((piece, index) => (
-            console.log('Rendering piece at index:', index, 'with id:', piece.id),
+         
             <div
               key={index}
               style={{
@@ -192,8 +244,10 @@ const Board: React.FC = () => {
                 name={piece.name}
                 color={piece.color}
                 location={index}
+                player={piece.player}
                 onPieceClick={handlePieceClick}
-                getAllPiecesFromBoard={getPieces}
+                pieces={pieces}
+                //getAllPiecesFromBoard={() => getPieces}
                 ref={(el) => (arrayOfChildRefs.current[index] = el)}
               />
             </div>

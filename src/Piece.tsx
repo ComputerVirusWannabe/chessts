@@ -9,8 +9,10 @@ type PiecePropsType = {
   color: string; // purely visual
   name: string;
   location: number;
+  player?: 'player1' | 'player2' | 'none'; // game logic
+  pieces?: ChessPiece[];
   onPieceClick: (id: string, location: number) => void;
-  getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
+ // getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
   ref?: React.Ref<any>;
 };
 
@@ -23,8 +25,11 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   const [id, setId] = useState(props.id);
   const [color, setColor] = useState(props.color); // purely visual
   const [name, setName] = useState(props.name);
+  const [player, setPlayer] = useState(props.player); // game logic
   const [location, setLocation] = useState(props.location);
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>();
+ 
+ 
   const mytheme = useContext(ThemeContext);
 
 
@@ -42,13 +47,14 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     }
   }, [props.location]);
 */
-  const calculateRookLegitimatePaths = (loc: number) => {
-    const allPieces = props.getAllPiecesFromBoard ? props.getAllPiecesFromBoard() : { pieces: [] };
-    const { pieces } = allPieces;
+/*
+  const calculateRookLegitimatePaths = () => {
+    //const allPieces = props.getAllPiecesFromBoard ? props.getAllPiecesFromBoard() : { pieces: [] };
+    //const { pieces } = allPieces;
     const moves: number[] = [];
 
-    const currentRow = Math.floor(loc / 8);
-    const currentCol = loc % 8;
+    const currentRow = Math.floor(location / 8);
+    const currentCol = location % 8;
 
     const scanDirection = (rowStep: number, colStep: number) => {
       let row = currentRow + rowStep;
@@ -56,12 +62,12 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
       while (row >= 0 && row < 8 && col >= 0 && col < 8) {
         const targetPos = row * 8 + col;
-        const targetPiece = pieces[targetPos];
+        const targetPiece = props.pieces?[targetPos]
 
         if (targetPiece.name === "Empty") {
           moves.push(targetPos);
         } else {
-          if (targetPiece.playerId !== pieces[loc].playerId) {
+          if (targetPiece.playerId !== props.pieces?[location].player) {
             moves.push(targetPos); // capture
           }
           break; // blocked
@@ -79,17 +85,58 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
     setLegitimatePaths(moves);
   };
+*/
+const calculatePawnLegitimatePaths = () => {
+   const moves: number[] = [];
+    const currentRow = Math.floor(location / 8);  // the row of this piece
+    const currentCol = location % 8; // the column of this piece
+    //const playerId = props.pieces ? props.pieces[location].player : 'none'; // get player from pieces array
+    const direction = player === 'player1' ? 1 : -1; // player1 moves down, player2 moves up
+    const startRow = player === 'player1' ? 1 : 6; // starting row for each player
+    const forwardOne = location + direction * 8; // one square forward
+    const forwardTwo = location + direction * 16; // two squares forward
+    // Move forward one square
+    if (onBoard(forwardOne) && props.pieces && props.pieces[forwardOne]?.name === 'Empty') {
+      moves.push(forwardOne);
 
-  const calculatePawnLegitimatePaths = (loc: number) => {
-    const allPieces = props.getAllPiecesFromBoard ? props.getAllPiecesFromBoard() : { pieces: [] };
-    const { pieces } = allPieces;
+      // Move forward two squares from starting row
+      if (currentRow === startRow && onBoard(forwardTwo) && props.pieces[forwardTwo]?.name === 'Empty') {
+        moves.push(forwardTwo);
+      }
+    }
+    // Capture diagonally left
+    const diagLeft = forwardOne - 1;
+    if (
+      onBoard(diagLeft) &&
+      Math.floor(diagLeft / 8) === currentRow + direction &&
+      props.pieces && props.pieces[diagLeft]?.name !== 'Empty' &&
+      props.pieces[diagLeft]?.player !== player
+    ) {
+      moves.push(diagLeft);
+    }
+    // Capture diagonally right
+    const diagRight = forwardOne + 1;
+    if (
+      onBoard(diagRight) &&
+      Math.floor(diagRight / 8) === currentRow + direction &&
+      props.pieces && props.pieces[diagRight]?.name !== 'Empty' &&
+      props.pieces[diagRight]?.player !== player
+    ) {
+      moves.push(diagRight);
+    }
+    setLegitimatePaths(moves);
+}
+/*
+  const calculatePawnLegitimatePaths = () => {
+    //const allPieces = props.getAllPiecesFromBoard ? props.getAllPiecesFromBoard() : { pieces: [] };
+    const pieces = props.pieces 
     const moves: number[] = [];
   
-    const currentRow = Math.floor(loc / 8);
-    const currentCol = loc % 8;
+    const currentRow = Math.floor(location / 8);
+    const currentCol = location % 8;
   
     // Determine player and direction
-    const playerId = pieces[loc]?.playerId;
+    const playerId = pieces?[location].player
   
     // Direction: player1 moves down (+1), player2 moves up (-1)
     const direction = playerId === 'player1' ? 1 : -1;
@@ -97,8 +144,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     // Starting row for each player
     const startRow = playerId === 'player1' ? 1 : 6;
   
-    const forwardOne = loc + direction * 8;
-    const forwardTwo = loc + direction * 16;
+    const forwardOne = location + direction * 8;
+    const forwardTwo = location + direction * 16;
   
     // Move forward one square
     if (onBoard(forwardOne) && pieces[forwardOne]?.name === 'Empty') {
@@ -115,8 +162,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     if (
       onBoard(diagLeft) &&
       Math.floor(diagLeft / 8) === currentRow + direction &&
-      pieces[diagLeft]?.name !== 'Empty' &&
-      pieces[diagLeft]?.playerId !== playerId
+      pieces?[diagLeft]
+      pieces[diagLeft]?.player !== player
     ) {
       moves.push(diagLeft);
     }
@@ -126,32 +173,34 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     if (
       onBoard(diagRight) &&
       Math.floor(diagRight / 8) === currentRow + direction &&
-      pieces[diagRight]?.name !== 'Empty' &&
-      pieces[diagRight]?.playerId !== playerId
+      pieces?[diagRight] !== 'Empty' &&
+      pieces[diagRight]?.player !== player
     ) {
       moves.push(diagRight);
     }
   
     setLegitimatePaths(moves);
   };
-  
+  */
 
   const calculateLegitimatePaths = (pieceType: string) => {
-    if (pieceType === 'Pawn') {
-      calculatePawnLegitimatePaths(location);
-    } else if (pieceType === 'Rook') {
-      calculateRookLegitimatePaths(location);
-    }
+    calculatePawnLegitimatePaths();
+    //if (pieceType === 'Pawn') {
+    //  calculatePawnLegitimatePaths();
+   // } else if (pieceType === 'Rook') {
+   //   calculateRookLegitimatePaths();
+  //  }
   };
 
   useEffect(() => {
+    //console.log("USE ******** EFFECT Piece,  props changed:", props);
     setId(props.id);
     setColor(props.color);
     setName(props.name);
     setLocation(props.location);
     //console.log(" recalculating legitimate paths since props for this piece has change", props.name, "at location", props.location);
     calculateLegitimatePaths(props.name);
-  }, [props]);
+  }, [props.id, props.color, props.name, props.location]);
 
   /*
 type PiecePropsType = {

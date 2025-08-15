@@ -25,7 +25,7 @@ export type ChessPiece = {
   name: string;
   color: string;
   hasMoved?: boolean;
-  player: 'player1' | 'player2' | 'none'; // game logic
+  player: 'player1' | 'player2' | null; // game logic
 };
 
 const boardGridStyle: React.CSSProperties = {
@@ -71,41 +71,43 @@ const Board: React.FC = () => {
     { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
     { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
 
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
 
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
 
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
 
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: 'none' },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
+    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
 
     // Empty middle rows
     /*
@@ -200,7 +202,7 @@ const Board: React.FC = () => {
           id: `${sourceLocation}`,
           name: 'Empty',
           color: 'green',
-          player: 'none',  //?????????????
+          player: null,
           hasMoved: false,
         };
         setPieces(newPieces);

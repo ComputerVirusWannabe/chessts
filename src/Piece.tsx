@@ -9,7 +9,7 @@ type PiecePropsType = {
   color: string; // purely visual
   name: string;
   location: number;
-  player?: 'player1' | 'player2' | 'none'; // game logic
+  player?: 'player1' | 'player2' | null; // game logic
   pieces?: ChessPiece[];
   onPieceClick: (id: string, location: number) => void;
  // getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
@@ -124,6 +124,7 @@ const calculatePawnLegitimatePaths = () => {
     ) {
       moves.push(diagRight);
     }
+    console.log("In UseEffect: &&&&&&&&& Pawn update moves for ", id, 'to ', moves);
     setLegitimatePaths(moves);
 }
 /*
@@ -225,6 +226,10 @@ type PiecePropsType = {
                 ref={(el) => (arrayOfChildRefs.current[index] = el)}
 */
 
+  const handleClick = () => {
+  console.log('in PieceComponent, Clicked piece:', id, 'at location:', location);
+    props.onPieceClick(id, location);
+  }
 
   useImperativeHandle(props.ref, () => ({
     getName: () => props.name,
@@ -242,8 +247,8 @@ type PiecePropsType = {
 // {legitimatePaths ? `Legit: ${legitimatePaths.join(', ')}` : 'No Legit Moves'}
   return (
     <div className="card">
-      <button onClick={() => props.onPieceClick(id, location)} style={styles}>
-        {name} at {location}
+      <button onClick={handleClick} style={styles}>
+        {name} {id} at {location}
         
       </button>
     </div>

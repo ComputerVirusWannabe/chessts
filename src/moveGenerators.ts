@@ -6,7 +6,7 @@ export type ChessPiece = {
     hasMoved?: boolean;
     location?: number;
   };
-  export type Board = ChessPiece[];
+  type Board = ChessPiece[];
   
   // ROOK 
   export const getRookMoves = (piece: ChessPiece, board: Board): number[] => {

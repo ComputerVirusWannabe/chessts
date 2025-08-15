@@ -47,7 +47,7 @@ const Board: React.FC = () => {
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [legalMoves, setLegalMoves] = useState<number[]>([]);
-  const [playerTurn, setPlayerTurn] = useState<'red' | 'grey'>('grey');
+  const [playerTurn, setPlayerTurn] = useState<'player1' | 'player2'>('player1');
   const [pair, setPair] = useState<PiecePair>({ source: null, target: null });
 
   const arrayOfChildRefs = useRef<(PieceRefType | null)[]>([]);
@@ -71,43 +71,6 @@ const Board: React.FC = () => {
     { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
     { id: uuidv4(), name: 'Pawn', color: 'red', player: 'player1' },
 
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-
-
-
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
-    { id: uuidv4(), name: 'Empty', color: 'green', player: null },
 
     // Empty middle rows
     /*
@@ -119,14 +82,14 @@ const Board: React.FC = () => {
     */
    // make 32 empty squares
     // Row 2 to Row 6 (Empty squares)
-   /*
+   
     ...Array(32).fill(null).map(() => ({
       id: uuidv4(),
       name: 'Empty',
       color: 'green',
-      player: 'none', // No player for empty squares
+      player: null, // No player for empty squares
     })),
-*/
+
     // Row 7 (Grey pawns)
     { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2'},
     { id: uuidv4(), name: 'Pawn', color: 'grey' , player: 'player2' },
@@ -177,7 +140,7 @@ const Board: React.FC = () => {
     // First click — selecting a piece
     if (pair.source === null) {
       if (clickedPiece.name === 'Empty') return;
-      if (clickedPiece.color !== playerTurn) return;
+      if (clickedPiece.player !== playerTurn) return;
 
       setPair({ source: { id: clicked_id, location: clicked_location }, target: null });
       setSelectedId(clicked_location);
@@ -197,7 +160,11 @@ const Board: React.FC = () => {
 
       if (legitimatePaths.includes(clicked_location)) {
         const newPieces = [...pieces];
-        newPieces[clicked_location] = pieces[sourceLocation];
+        //newPieces[clicked_location] = pieces[sourceLocation];
+        newPieces[clicked_location] = { 
+          ...pieces[sourceLocation], 
+          hasMoved: true 
+        };
         newPieces[sourceLocation] = {
           id: `${sourceLocation}`,
           name: 'Empty',
@@ -206,7 +173,7 @@ const Board: React.FC = () => {
           hasMoved: false,
         };
         setPieces(newPieces);
-        setPlayerTurn(playerTurn === 'red' ? 'grey' : 'red');
+        setPlayerTurn(playerTurn === 'player1' ? 'player2' : 'player1');
       }
 
       setPair({ source: null, target: null });
@@ -248,7 +215,7 @@ const Board: React.FC = () => {
                 location={index}
                 player={piece.player}
                 onPieceClick={handlePieceClick}
-                pieces={pieces}
+                board={pieces}
                 //getAllPiecesFromBoard={() => getPieces}
                 ref={(el) => (arrayOfChildRefs.current[index] = el)}
               />

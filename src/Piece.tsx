@@ -1,16 +1,15 @@
 import React, { useEffect, useImperativeHandle, useState, useContext } from 'react';
 import './App.css';
 import { ThemeContext } from './context/ThemeContext';
-import { type ChessPiece } from './Board';
-
-
+import { type ChessPiece } from './context/BoardContext';
+import { useBoardContext } from './context/BoardContext';
 type PiecePropsType = {
   id: string;
   color: string; // purely visual
   name: string;
   location: number;
   player?: 'player1' | 'player2' | null; // game logic
-  board: ChessPiece[];
+  //board: ChessPiece[]; no need for this anymore because of the new context for the board
   onPieceClick: (id: string, location: number) => void;
  // getAllPiecesFromBoard?: () => { pieces: ChessPiece[], selectedId?: number };
   ref?: React.Ref<any>;
@@ -28,6 +27,9 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   const [player, setPlayer] = useState(props.player); // game logic
   const [location, setLocation] = useState(props.location);
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>();
+  const { pieces, setPieces } = useBoardContext();
+ 
+  
  
  
   const mytheme = useContext(ThemeContext);
@@ -61,11 +63,11 @@ const calculatePawnLegitimatePaths = () => {
     const forwardOne = location + direction * 8; // one square forward
     const forwardTwo = location + direction * 16; // two squares forward
     // Move forward one square
-    if (onBoard(forwardOne) && props.board && props.board[forwardOne]?.name === 'Empty') {
+    if (onBoard(forwardOne) && pieces && pieces[forwardOne]?.name === 'Empty') {
       moves.push(forwardOne);
 
       // Move forward two squares from starting row
-      if (!props.board[location]?.hasMoved && onBoard(forwardTwo) && props.board[forwardTwo]?.name === 'Empty') {
+      if (!pieces[location]?.hasMoved && onBoard(forwardTwo) && pieces[forwardTwo]?.name === 'Empty') {
         moves.push(forwardTwo);
       }      
     }
@@ -74,8 +76,8 @@ const calculatePawnLegitimatePaths = () => {
     if (
       onBoard(diagLeft) &&
       Math.floor(diagLeft / 8) === currentRow + direction && // ensures it’s actually diagonal
-      props.board?.[diagLeft]?.name !== 'Empty' &&
-      props.board?.[diagLeft]?.player !== player
+      pieces?.[diagLeft]?.name !== 'Empty' &&
+      pieces?.[diagLeft]?.player !== player
     ) {
       moves.push(diagLeft);
     }
@@ -84,8 +86,8 @@ const calculatePawnLegitimatePaths = () => {
     if (
       onBoard(diagRight) &&
       Math.floor(diagRight / 8) === currentRow + direction && // ensures it’s actually diagonal
-      props.board?.[diagRight]?.name !== 'Empty' &&
-      props.board?.[diagRight]?.player !== player
+      pieces?.[diagRight]?.name !== 'Empty' &&
+      pieces?.[diagRight]?.player !== player
     ) {
       moves.push(diagRight);
     }
@@ -118,8 +120,24 @@ const calculatePawnLegitimatePaths = () => {
   useEffect(() => {
     // Only recalc if this piece’s location or type changes
     calculateLegitimatePaths(props.name);
-  }, [props.name, props.location, props.board]);
-
+  }, [props.name, props.location, props.player, pieces]);
+  
+  // Recalculate legitimate paths if any relevant pieces have moved 
+  /*
+  useEffect(() => {
+    const forwardOne = location + (player === 'player1' ? 8 : -8);
+    const diagLeft = forwardOne - 1;
+    const diagRight = forwardOne + 1;
+    
+    const relevantSquares = [forwardOne, diagLeft, diagRight];
+    const piecesChanged = relevantSquares.some(
+      idx => pieces[idx]?.hasMoved // or any property that matters
+    );
+  
+    if (piecesChanged) calculateLegitimatePaths('Pawn');
+  }, [props.name, props.location, pieces]);
+  
+*/
 
   const handleClick = () => {
     console.log('in PieceComponent, Clicked piece:', id, 'at location:', location);

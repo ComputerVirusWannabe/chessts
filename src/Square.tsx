@@ -4,20 +4,20 @@ import Piece from './Piece';
 import { ThemeContext } from './context/ThemeContext';
 import { type PieceType } from './context/BoardContext';
 
-type SquareProps = {
+type SquarePropsType = {
     index: number;
     onPieceClick?: (id: string, location: number, paths: number[]) => void;
   } & PieceType;
   
 
-  const Square: React.FC<SquareProps> = ({ index, id, name, color, player, hasMoved, onPieceClick }) => {
+  const Square: React.FC<SquarePropsType> = ({ index, id, name, color, player, hasMoved, onPieceClick }) => {
     const boardContext = useContext(BoardContext);
     if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
   
-    const { squares, highlightedSquares, handleSquareClick } = boardContext;
+    const { highlightedSquares, handleSquareClick } = boardContext;
     const theme = useContext(ThemeContext);
   
-    const square = squares[index];
+    //const square = squares[index];
     const isHighlighted = highlightedSquares.includes(index);
   
     const isLightSquare = (Math.floor(index / 8) + (index % 8)) % 2 === 0;

@@ -4,7 +4,7 @@ import { BoardContext } from './context/BoardContext';
 import { type PieceType } from './context/BoardContext';
 
 export type PiecePropsType = PieceType & {
-  onPieceClick: (id: string, location: number, paths: number[]) => void;
+  //onPieceClick: (id: string, location: number, paths: number[]) => void;
   ref?: React.Ref<any>;
 };
 
@@ -16,11 +16,11 @@ export type PieceRefType = {
 
 const Piece: React.FC<PiecePropsType> = (props) => {
   // ----- STATE -----
-  const [id, setId] = useState(props.id);
+  //const [id, setId] = useState(props.id);
   const [name, setName] = useState(props.name);
   const [color, setColor] = useState(props.color);
   const [player, setPlayer] = useState(props.player);
-  const [location, setLocation] = useState(props.location);
+  
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>();
   const Piece = props.name ? props.name.toLowerCase() : null;
   const hasMoved = props.hasMoved || false; // Default to false if not provided
@@ -44,15 +44,15 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     }
 
     const moves: number[] = [];
-    const row = Math.floor(location / 8);
-    const col = location % 8;
+    const row = Math.floor(props.location / 8);
+    const col = props.location % 8;
 
     // bottom player1 moves up (-8), top player2 moves down (+8)
     const direction = player === 'player1' ? -1 : 1;
     const startRow = player === 'player1' ? 6 : 1;
 
-    const forwardOne = location + direction * 8;
-    const forwardTwo = location + direction * 16;
+    const forwardOne = props.location + direction * 8;
+    const forwardTwo = props.location + direction * 16;
 
     // Forward moves
     if (onBoard(forwardOne) && !boardSquares[forwardOne].piece) {
@@ -65,7 +65,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     // Diagonal captures
     for (const dc of [-1, 1]) {
       const targetCol = col + dc;
-      const targetPos = location + direction * 8 + dc; // use location here
+      const targetPos = props.location + direction * 8 + dc; // use location here
       if (!onBoard(targetPos) || targetCol < 0 || targetCol > 7) continue;
 
       const targetPiece = boardSquares[targetPos]?.piece;
@@ -89,7 +89,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     const directions = [-8, 8, -1, 1]; // Up, Down, Left, Right
 
     for (const direction of directions) {
-      let pos = location + direction;
+      let pos = props.location + direction;
       while (onBoard(pos)) {
         const targetPiece = boardSquares[pos]?.piece;
         if (targetPiece) {
@@ -118,17 +118,17 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   // ----- EFFECTS -----
   // Update state when props change
   useEffect(() => {
-    setId(props.id);
+    //setId(props.id);
     setName(props.name);
     setColor(props.color);
     setPlayer(props.player);
-    setLocation(props.location);
+   
   }, [props.id, props.name, props.color, props.player, props.location]);
 
   // Recalculate legitimate moves when relevant state changes
   useEffect(() => {
     calculateLegitimatePaths();
-  }, [name, location, player, Piece, boardSquares, hasMoved]);
+  }, [name, props.location, player, Piece, boardSquares, hasMoved]);
 
   // ----- IMPERATIVE HANDLE -----
   useImperativeHandle(props.ref, () => ({
@@ -139,8 +139,9 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   // ----- HANDLERS -----
   const handleClick = () => {
     const paths = calculateLegitimatePaths() || []; // Ensure paths is always an array
-    console.log('Clicked piece:', id, 'at location:', location, 'paths:', paths);
-    props.onPieceClick?.(id, location, paths);
+    //console.log('Clicked piece:', id, 'at props.location:', location, 'paths:', paths);
+    //props.onPieceClick?.(id, location, paths);
+    boardContext.handlePieceClick(props.id, props.location, paths);
   };
   
   
@@ -160,7 +161,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   return (
     <div className="card">
       <button onClick={handleClick} style={styles}>
-        {name} {id} at {location}
+        {name}
       </button>
     </div>
   );

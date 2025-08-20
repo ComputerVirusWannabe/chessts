@@ -43,7 +43,7 @@ const Board: React.FC = () => {
             color={squares[index].piece?.color || ''}
             player={squares[index].piece?.player || null}
             hasMoved={squares[index].piece?.hasMoved || false}
-            onPieceClick={boardContext.handlePieceClick}
+            
           />
         
         ))}

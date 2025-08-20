@@ -27,17 +27,23 @@ type SquarePropsType = {
     const styles: React.CSSProperties = {
       width: '100%',
       height: '100%',
-      minHeight: '0',
-      backgroundColor: isLightSquare ? lightSquareColor : darkSquareColor,
+      minHeight: 0,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: isHighlighted ? '3px solid yellow' : '1px solid black',
       cursor: 'pointer',
+      backgroundColor: isHighlighted
+        ? 'yellow'
+        : isLightSquare
+        ? lightSquareColor
+        : darkSquareColor,
+      border: isHighlighted ? '3px solid red' : '3px solid black',
     };
+    
   
     return (
-        <div style={styles} onClick={() => handleSquareClick(index)}>
+        <div style={styles} onClick={() => handleSquareClick(index)}
+        >
             {id && (
                 <Piece
                     id={id}

@@ -11,32 +11,27 @@ const Board: React.FC = () => {
   const { squares } = boardContext;
 
   const themeContext = useContext(ThemeContext);
+  const { currentTurn } = useContext(BoardContext)!;
+
 
   const toggleTheme = () => {
     if (themeContext) {
       themeContext.setTheme(themeContext.theme === 'dark' ? 'light' : 'dark');
     }
   };
-  /*
-  const boardStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
-    gridTemplateRows: 'repeat(8, 1fr)',
-    width: '90%',
-    height: '90vw',
-    maxWidth: '600px',
-    maxHeight: '600px',
-    margin: '20px auto',
-    border: '2px solid black',
-  };
-  */
 
   return (
     <div>
       <button onClick={toggleTheme} style={{ marginBottom: '10px' }}>
         Toggle Theme
       </button>
-
+      <div
+        className={`px-4 py-1 rounded-xl font-semibold shadow-md ${
+          currentTurn === 'player1' ? 'bg-gray-300 text-black' : 'bg-red-400 text-white'
+        }`}
+      >
+        {currentTurn === 'player1' ? "Player 1's Turn" : "Player 2's Turn"}
+      </div>
       <div className="board">
         {squares.map((_, index) => (
           <Square

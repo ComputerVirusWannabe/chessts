@@ -78,8 +78,39 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     return moves; // so clicks get fresh paths
   };
 
+
+  const calculateRookLegitimatePaths = (): number[] => {
+    if (!player || !pieceName) {
+      setLegitimatePaths([]);
+      return [];
+    }
+
+    const moves: number[] = [];
+    const directions = [-8, 8, -1, 1]; // Up, Down, Left, Right
+
+    for (const direction of directions) {
+      let pos = location + direction;
+      while (onBoard(pos)) {
+        const targetPiece = boardSquares[pos]?.piece;
+        if (targetPiece) {
+          if (targetPiece.player && targetPiece.player !== player) {
+            moves.push(pos); // Capture
+          }
+          break; // Stop at first piece
+        }
+        moves.push(pos);
+        pos += direction;
+      }
+    }
+
+    setLegitimatePaths(moves);
+    return moves;
+  }
+
   const calculateLegitimatePaths = (): number[] => {
     if (name?.toLowerCase() === 'pawn') return calculatePawnLegitimatePaths();
+    if (name?.toLowerCase() === 'rook') return calculateRookLegitimatePaths();
+    
     return [];
   };
   

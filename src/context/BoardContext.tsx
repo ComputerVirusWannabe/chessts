@@ -3,7 +3,7 @@ import React, { createContext, useState, type ReactNode } from 'react';
 export type PieceType = {
   id: string;
   name: string; // 'pawn', 'rook', etc.
-  color: string; // visual color
+  color: string;
   player: 'player1' | 'player2' | null;
   location: number;
   hasMoved?: boolean; // Optional, used for pawns
@@ -17,6 +17,7 @@ type BoardContextType = {
   squares: SquareType[];
   selectedPieceId: string | null;
   highlightedSquares: number[];
+  currentTurn: 'player1' | 'player2';
   handleSquareClick: (index: number) => void;
   handlePieceClick: (id: string, location: number, paths: number[]) => void;
   movePiece: (fromIndex: number, toIndex: number) => void;
@@ -25,10 +26,8 @@ type BoardContextType = {
 export const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize empty board
   const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
 
-  // Helper to create a piece
   const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
     id: `${name}-${player}-${location}`,
     name,
@@ -38,7 +37,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   });
 
   // Setup pieces
-  // Player2 (top)
   for (let i = 0; i < 8; i++) initialSquares[8 + i].piece = createPiece('pawn', 'player2', 8 + i);
   initialSquares[0].piece = createPiece('rook', 'player2', 0);
   initialSquares[7].piece = createPiece('rook', 'player2', 7);
@@ -48,10 +46,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   initialSquares[5].piece = createPiece('bishop', 'player2', 5);
   initialSquares[3].piece = createPiece('queen', 'player2', 3);
   initialSquares[4].piece = createPiece('king', 'player2', 4);
-  
-  //empty squares:
-  //for (let i = 16; i < 48; i++) initialSquares[i].piece = createPiece('Empty', 'none', i);
-  // Player1 (bottom)
+
   for (let i = 0; i < 8; i++) initialSquares[48 + i].piece = createPiece('pawn', 'player1', 48 + i);
   initialSquares[56].piece = createPiece('rook', 'player1', 56);
   initialSquares[63].piece = createPiece('rook', 'player1', 63);
@@ -65,6 +60,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [squares, setSquares] = useState<SquareType[]>(initialSquares);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [highlightedSquares, setHighlightedSquares] = useState<number[]>([]);
+  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>('player1'); // ✅ turn state
 
   // Move a piece from one square to another
   const movePiece = (fromIndex: number, toIndex: number) => {
@@ -75,11 +71,12 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       newSquares[fromIndex] = { piece: null };
       return newSquares;
     });
+
     setSelectedPieceId(null);
     setHighlightedSquares([]);
+    setCurrentTurn(prev => (prev === 'player1' ? 'player2' : 'player1')); // ✅ switch turns
   };
 
-  // Called when a square is clicked
   const handleSquareClick = (index: number) => {
     if (selectedPieceId) {
       const fromIndex = squares.findIndex(sq => sq.piece?.id === selectedPieceId);
@@ -91,21 +88,21 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // Called when a piece is clicked
   const handlePieceClick = (id: string, location: number, paths: number[]) => {
-    console.log('BoardContext handlePieceClick', id, location, paths);
+    const piece = squares.find(sq => sq.piece?.id === id)?.piece;
+    if (!piece || piece.player !== currentTurn) return; // block clicks from wrong player
+
     setSelectedPieceId(id);
-    setHighlightedSquares(paths); 
+    setHighlightedSquares(paths);
   };
-  
 
   return (
     <BoardContext.Provider
-    
       value={{
         squares,
         selectedPieceId,
         highlightedSquares,
+        currentTurn,
         handleSquareClick,
         movePiece,
         handlePieceClick,

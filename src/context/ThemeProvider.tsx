@@ -6,18 +6,22 @@ type ThemeProviderPropsType = {
 };
 
 export const ThemeProvider: React.FC<ThemeProviderPropsType> = ({ children }) => {
-  const [theme, setTheme] = useState<string>('light');
+  const [theme, setThemeState] = useState<string>('light');
+
+  // Proper setter
+  const setTheme = (newTheme: string) => {
+    setThemeState(newTheme);
+  };
 
   const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const value: ThemeContextType = {
-    theme, toggleTheme,
-    setTheme: function (theme: string): void {
-      throw new Error('Function not implemented.');
-    }
-  }; // Ensure the value matches the context type
+    theme,
+    setTheme,
+    toggleTheme,
+  };
 
   return (
     <ThemeContext.Provider value={value}>

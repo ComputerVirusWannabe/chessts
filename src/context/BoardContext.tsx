@@ -1,83 +1,116 @@
-import React, { createContext, useContext, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React, { createContext, useState, type ReactNode } from 'react';
 
-// Types
-export type ChessPiece = {
+export type PieceType = {
   id: string;
-  name: string;
-  color: string;
-  hasMoved?: boolean;
-  player: "player1" | "player2" | null;
+  name: string; // 'pawn', 'rook', etc.
+  color: string; // visual color
+  player: 'player1' | 'player2' | null;
+  location: number;
+  hasMoved?: boolean; // Optional, used for pawns
+};
+
+type SquareType = {
+  piece: PieceType | null;
 };
 
 type BoardContextType = {
-  pieces: ChessPiece[];
-  setPieces: React.Dispatch<React.SetStateAction<ChessPiece[]>>;
-  playerTurn: "player1" | "player2";
-  setPlayerTurn: React.Dispatch<React.SetStateAction<"player1" | "player2">>;
+  squares: SquareType[];
+  selectedPieceId: string | null;
+  highlightedSquares: number[];
+  handleSquareClick: (index: number) => void;
+  handlePieceClick: (id: string, location: number, paths: number[]) => void;
+  movePiece: (fromIndex: number, toIndex: number) => void;
 };
 
-const BoardContext = createContext<BoardContextType | undefined>(undefined);
+export const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
-// hook
-export const useBoardContext = () => {
-  const ctx = useContext(BoardContext);
-  if (!ctx) throw new Error("useBoardContext must be used inside a BoardProvider");
-  return ctx;
-};
+export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Initialize empty board
+  const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
 
-// provider with initial state
-export const BoardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [pieces, setPieces] = useState<ChessPiece[]>([
-    // Row 1 (Red pieces)
-    { id: uuidv4(), name: "Rook", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Knight", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Bishop", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Queen", color: "red", player: "player1" },
-    { id: uuidv4(), name: "King", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Bishop", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Knight", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Rook", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
-    { id: uuidv4(), name: "Pawn", color: "red", player: "player1" },
+  // Helper to create a piece
+  const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
+    id: `${name}-${player}-${location}`,
+    name,
+    color: player === 'player1' ? 'grey' : 'red',
+    player,
+    location,
+  });
 
-    // Empty middle rows
-    ...Array(32).fill(null).map(() => ({
-      id: uuidv4(),
-      name: "Empty",
-      color: "green",
-      player: null,
-    })),
+  // Setup pieces
+  // Player2 (top)
+  for (let i = 0; i < 8; i++) initialSquares[8 + i].piece = createPiece('pawn', 'player2', 8 + i);
+  initialSquares[0].piece = createPiece('rook', 'player2', 0);
+  initialSquares[7].piece = createPiece('rook', 'player2', 7);
+  initialSquares[1].piece = createPiece('knight', 'player2', 1);
+  initialSquares[6].piece = createPiece('knight', 'player2', 6);
+  initialSquares[2].piece = createPiece('bishop', 'player2', 2);
+  initialSquares[5].piece = createPiece('bishop', 'player2', 5);
+  initialSquares[3].piece = createPiece('queen', 'player2', 3);
+  initialSquares[4].piece = createPiece('king', 'player2', 4);
+  
+  //empty squares:
+  //for (let i = 16; i < 48; i++) initialSquares[i].piece = createPiece('Empty', 'none', i);
+  // Player1 (bottom)
+  for (let i = 0; i < 8; i++) initialSquares[48 + i].piece = createPiece('pawn', 'player1', 48 + i);
+  initialSquares[56].piece = createPiece('rook', 'player1', 56);
+  initialSquares[63].piece = createPiece('rook', 'player1', 63);
+  initialSquares[57].piece = createPiece('knight', 'player1', 57);
+  initialSquares[62].piece = createPiece('knight', 'player1', 62);
+  initialSquares[58].piece = createPiece('bishop', 'player1', 58);
+  initialSquares[61].piece = createPiece('bishop', 'player1', 61);
+  initialSquares[59].piece = createPiece('queen', 'player1', 59);
+  initialSquares[60].piece = createPiece('king', 'player1', 60);
 
-    // Row 7 (Grey pawns)
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Pawn", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Rook", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Knight", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Bishop", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Queen", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "King", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Bishop", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Knight", color: "grey", player: "player2" },
-    { id: uuidv4(), name: "Rook", color: "grey", player: "player2" },
-  ]);
+  const [squares, setSquares] = useState<SquareType[]>(initialSquares);
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+  const [highlightedSquares, setHighlightedSquares] = useState<number[]>([]);
 
-  const [playerTurn, setPlayerTurn] = useState<"player1" | "player2">("player1");
+  // Move a piece from one square to another
+  const movePiece = (fromIndex: number, toIndex: number) => {
+    setSquares(prev => {
+      const newSquares = [...prev];
+      newSquares[toIndex] = { piece: newSquares[fromIndex].piece };
+      newSquares[toIndex].piece!.location = toIndex;
+      newSquares[fromIndex] = { piece: null };
+      return newSquares;
+    });
+    setSelectedPieceId(null);
+    setHighlightedSquares([]);
+  };
+
+  // Called when a square is clicked
+  const handleSquareClick = (index: number) => {
+    if (selectedPieceId) {
+      const fromIndex = squares.findIndex(sq => sq.piece?.id === selectedPieceId);
+      if (fromIndex !== -1 && highlightedSquares.includes(index)) {
+        movePiece(fromIndex, index);
+      }
+      setSelectedPieceId(null);
+      setHighlightedSquares([]);
+    }
+  };
+
+  // Called when a piece is clicked
+  const handlePieceClick = (id: string, location: number, paths: number[]) => {
+    console.log('BoardContext handlePieceClick', id, location, paths);
+    setSelectedPieceId(id);
+    setHighlightedSquares(paths); 
+  };
+  
 
   return (
-    <BoardContext.Provider value={{ pieces, setPieces, playerTurn, setPlayerTurn }}>
+    <BoardContext.Provider
+    
+      value={{
+        squares,
+        selectedPieceId,
+        highlightedSquares,
+        handleSquareClick,
+        movePiece,
+        handlePieceClick,
+      }}
+    >
       {children}
     </BoardContext.Provider>
   );

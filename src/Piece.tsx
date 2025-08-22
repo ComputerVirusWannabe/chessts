@@ -17,9 +17,7 @@ export type PieceRefType = {
 const Piece: React.FC<PiecePropsType> = (props) => {
   // ----- STATE -----
   //const [id, setId] = useState(props.id);
-  const [name, setName] = useState(props.name);
-  const [color, setColor] = useState(props.color);
-  const [player, setPlayer] = useState(props.player);
+  //const [name, setName] = useState(props.name);
   
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>();
   const Piece = props.name ? props.name.toLowerCase() : null;
@@ -38,7 +36,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   const pieceName = props.name ? props.name.toLowerCase() : null;
 
   const calculatePawnLegitimatePaths = (): number[] => {
-    if (!player || !pieceName) {
+    if (!props.player || !pieceName) {
       setLegitimatePaths([]);
       return [];
     }
@@ -48,8 +46,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     const col = props.location % 8;
 
     // bottom player1 moves up (-8), top player2 moves down (+8)
-    const direction = player === 'player1' ? -1 : 1;
-    const startRow = player === 'player1' ? 6 : 1;
+    const direction = props.player === 'player1' ? -1 : 1;
+    const startRow = props.player === 'player1' ? 6 : 1;
 
     const forwardOne = props.location + direction * 8;
     const forwardTwo = props.location + direction * 16;
@@ -69,7 +67,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
       if (!onBoard(targetPos) || targetCol < 0 || targetCol > 7) continue;
 
       const targetPiece = boardSquares[targetPos]?.piece;
-      if (targetPiece && targetPiece.player && targetPiece.player !== player) {
+      if (targetPiece && targetPiece.player && targetPiece.player !== props.player) {
         moves.push(targetPos);
       }
     }
@@ -80,7 +78,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
 
   const calculateRookLegitimatePaths = (): number[] => {
-    if (!player || !pieceName) {
+    if (!props.player || !pieceName) {
       setLegitimatePaths([]);
       return [];
     }
@@ -93,7 +91,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
       while (onBoard(pos)) {
         const targetPiece = boardSquares[pos]?.piece;
         if (targetPiece) {
-          if (targetPiece.player && targetPiece.player !== player) {
+          if (targetPiece.player && targetPiece.player !== props.player) {
             moves.push(pos); // Capture
           }
           break; // Stop at first piece
@@ -107,9 +105,42 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     return moves;
   }
 
+  const calculateKnightLegitimatePaths = (): number[] => {
+    if (!props.player || !pieceName) {
+      setLegitimatePaths([]);
+      return [];
+    }
+  
+    const moves: number[] = [];
+    const knightDeltas = [
+      [2, 1], [2, -1], [-2, 1], [-2, -1],
+      [1, 2], [1, -2], [-1, 2], [-1, -2],
+    ];
+  
+    const row = Math.floor(props.location / 8);
+    const col = props.location % 8;
+  
+    for (const [dr, dc] of knightDeltas) {
+      const newRow = row + dr;
+      const newCol = col + dc;
+  
+      if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+        const targetPos = newRow * 8 + newCol;
+        const targetPiece = boardSquares[targetPos]?.piece;
+        if (!targetPiece || (targetPiece.player && targetPiece.player !== props.player)) {
+          moves.push(targetPos);
+        }
+      }
+    }
+  
+    setLegitimatePaths(moves);
+    return moves;
+  };
+  
   const calculateLegitimatePaths = (): number[] => {
-    if (name?.toLowerCase() === 'pawn') return calculatePawnLegitimatePaths();
-    if (name?.toLowerCase() === 'rook') return calculateRookLegitimatePaths();
+    if (props.name?.toLowerCase() === 'pawn') return calculatePawnLegitimatePaths();
+    if (props.name?.toLowerCase() === 'rook') return calculateRookLegitimatePaths();
+    if (props.name?.toLowerCase() === 'knight') return calculateKnightLegitimatePaths();
     
     return [];
   };
@@ -117,22 +148,24 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
   // ----- EFFECTS -----
   // Update state when props change
+  /*
   useEffect(() => {
     //setId(props.id);
-    setName(props.name);
-    setColor(props.color);
-    setPlayer(props.player);
+    //setName(props.name);
+    //setColor(props.color);
+    //setPlayer(props.player);
    
   }, [props.id, props.name, props.color, props.player, props.location]);
+  */
 
   // Recalculate legitimate moves when relevant state changes
   useEffect(() => {
     calculateLegitimatePaths();
-  }, [name, props.location, player, Piece, boardSquares, hasMoved]);
+  }, [props.name, props.location, props.player, Piece, boardSquares, hasMoved]);
 
   // ----- IMPERATIVE HANDLE -----
   useImperativeHandle(props.ref, () => ({
-    getName: () => name,
+    getName: () => props.name,
     getLegitimatePaths: () => legitimatePaths,
   }));
 
@@ -149,7 +182,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
   // ----- STYLES -----
   const styles: React.CSSProperties = {
-    backgroundColor: color,
+    backgroundColor: props.color,
     color: theme?.theme === 'dark' ? 'white' : 'black',
     width: '100%',
     height: '100%',
@@ -161,7 +194,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   return (
     <div className="card">
       <button onClick={handleClick} style={styles}>
-        {name}
+        {props.name}
       </button>
     </div>
   );

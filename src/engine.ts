@@ -68,15 +68,3 @@ export const isStalemate = (player: 'player1' | 'player2', squares: SquareType[]
   }
   return true;
 };
-
-// Move a piece and return a new board
-export const movePiece = (
-  fromIndex: number,
-  toIndex: number,
-  squares: SquareType[]
-): SquareType[] => {
-  const newSquares = squares.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
-  newSquares[toIndex].piece = { ...newSquares[fromIndex].piece!, location: toIndex };
-  newSquares[fromIndex].piece = null;
-  return newSquares;
-};

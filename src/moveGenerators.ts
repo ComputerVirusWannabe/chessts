@@ -133,20 +133,3 @@ export const generatePseudoLegalMoves = (
 
   return moves;
 };
-
-export const isSquareAttacked = (
-  square: number,
-  byPlayer: string,
-  squares: { piece?: PieceType }[]
-): boolean => {
-  for (let i = 0; i < 64; i++) {
-    const piece = squares[i]?.piece;
-    if (piece && piece.player === byPlayer) {
-      const moves = generatePseudoLegalMoves(piece, i, squares as { piece: PieceType | null }[]);
-      if (moves.includes(square)) {
-        return true;
-      }
-    }
-  }
-  return false;
-};

@@ -14,8 +14,11 @@ type SquarePropsType = {
     const boardContext = useContext(BoardContext);
     if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
   
-    const { highlightedSquares, handleSquareClick } = boardContext;
+    const { highlightedSquares, handleSquareClick, kingInCheckSquare } = boardContext;
     const theme = useContext(ThemeContext);
+
+    const isKingInCheckHere = index === kingInCheckSquare;
+    
   
     //const square = squares[index];
     const isHighlighted = highlightedSquares.includes(index);
@@ -41,6 +44,19 @@ type SquarePropsType = {
       backgroundColor = darkSquareColor;
     }
 
+    
+    let border: string = '2px solid black';
+
+    if (isKingInCheckHere) {
+      backgroundColor = 'rgba(255, 0, 0, 0.3)'; // Light red background for check
+    } else if (isHighlighted) {
+      backgroundColor = 'yellow';
+    } else if (isLightSquare) {
+      backgroundColor = lightSquareColor;
+    } else {
+      backgroundColor = darkSquareColor;
+    }
+
     const styles: React.CSSProperties = {
       width: '100%',
       height: '100%',
@@ -49,12 +65,11 @@ type SquarePropsType = {
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
-      // Use CSS variable for backgroundColor
-      backgroundColor:backgroundColor,
-      border: isHighlighted ? '3px solid red' : '3px solid black',
+      backgroundColor: backgroundColor,
+      border,
     };
     
-  
+    
     return (
         <div style={styles} onClick={() => handleSquareClick(index)}
         >

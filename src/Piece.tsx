@@ -2,6 +2,8 @@ import React, { useEffect, useImperativeHandle, useState, useContext } from 'rea
 import { ThemeContext } from './context/ThemeContext';
 import { BoardContext } from './context/BoardContext';
 import { type PieceType } from './context/BoardContext';
+import { generatePseudoLegalMoves } from './moveGenerators';
+//import { isSquareAttacked } from './moveGenerators';
 
 export type PiecePropsType = PieceType & {
   //onPieceClick: (id: string, location: number, paths: number[]) => void;
@@ -20,7 +22,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   //const [name, setName] = useState(props.name);
   
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>();
-  const Piece = props.name ? props.name.toLowerCase() : null;
+  const pieceName = props.name ? props.name.toLowerCase() : null;
+
   const hasMoved = props.hasMoved || false; // Default to false if not provided
 
   // ----- CONTEXT -----
@@ -30,138 +33,62 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   const boardSquares = boardContext.squares;
 
 
-  const onBoard = (pos: number) => pos >= 0 && pos < 64;
+  //const onBoard = (pos: number) => pos >= 0 && pos < 64;
 
   // ----- LEGITIMATE MOVES -----
-  const pieceName = props.name ? props.name.toLowerCase() : null;
-
-  const calculatePawnLegitimatePaths = (): number[] => {
-    if (!props.player || !pieceName) {
-      setLegitimatePaths([]);
-      return [];
-    }
-
-    const moves: number[] = [];
-    const row = Math.floor(props.location / 8);
-    const col = props.location % 8;
-
-    // bottom player1 moves up (-8), top player2 moves down (+8)
-    const direction = props.player === 'player1' ? -1 : 1;
-    const startRow = props.player === 'player1' ? 6 : 1;
-
-    const forwardOne = props.location + direction * 8;
-    const forwardTwo = props.location + direction * 16;
-
-    // Forward moves
-    if (onBoard(forwardOne) && !boardSquares[forwardOne].piece) {
-      moves.push(forwardOne);
-      if (!hasMoved && row === startRow && onBoard(forwardTwo) && !boardSquares[forwardTwo].piece) {
-        moves.push(forwardTwo);
-      }
-    }
-
-    // Diagonal captures
-    for (const dc of [-1, 1]) {
-      const targetCol = col + dc;
-      const targetPos = props.location + direction * 8 + dc; // use location here
-      if (!onBoard(targetPos) || targetCol < 0 || targetCol > 7) continue;
-
-      const targetPiece = boardSquares[targetPos]?.piece;
-      if (targetPiece && targetPiece.player && targetPiece.player !== props.player) {
-        moves.push(targetPos);
-      }
-    }
-
-    setLegitimatePaths(moves);
-    return moves; // so clicks get fresh paths
-  };
-
-
-  const calculateRookLegitimatePaths = (): number[] => {
-    if (!props.player || !pieceName) {
-      setLegitimatePaths([]);
-      return [];
-    }
-
-    const moves: number[] = [];
-    const directions = [-8, 8, -1, 1]; // Up, Down, Left, Right
-
-    for (const direction of directions) {
-      let pos = props.location + direction;
-      while (onBoard(pos)) {
-        const targetPiece = boardSquares[pos]?.piece;
-        if (targetPiece) {
-          if (targetPiece.player && targetPiece.player !== props.player) {
-            moves.push(pos); // Capture
-          }
-          break; // Stop at first piece
-        }
-        moves.push(pos);
-        pos += direction;
-      }
-    }
-
-    setLegitimatePaths(moves);
-    return moves;
-  }
-
-  const calculateKnightLegitimatePaths = (): number[] => {
-    if (!props.player || !pieceName) {
-      setLegitimatePaths([]);
-      return [];
-    }
-  
-    const moves: number[] = [];
-    const knightDeltas = [
-      [2, 1], [2, -1], [-2, 1], [-2, -1],
-      [1, 2], [1, -2], [-1, 2], [-1, -2],
-    ];
-  
-    const row = Math.floor(props.location / 8);
-    const col = props.location % 8;
-  
-    for (const [dr, dc] of knightDeltas) {
-      const newRow = row + dr;
-      const newCol = col + dc;
-  
-      if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-        const targetPos = newRow * 8 + newCol;
-        const targetPiece = boardSquares[targetPos]?.piece;
-        if (!targetPiece || (targetPiece.player && targetPiece.player !== props.player)) {
-          moves.push(targetPos);
-        }
-      }
-    }
-  
-    setLegitimatePaths(moves);
-    return moves;
-  };
   
   const calculateLegitimatePaths = (): number[] => {
-    if (props.name?.toLowerCase() === 'pawn') return calculatePawnLegitimatePaths();
-    if (props.name?.toLowerCase() === 'rook') return calculateRookLegitimatePaths();
-    if (props.name?.toLowerCase() === 'knight') return calculateKnightLegitimatePaths();
-    
-    return [];
+    if (!props.player || !pieceName) {
+      setLegitimatePaths([]);
+      return [];
+    }
+  
+    // 1. Generate pseudo-legal moves
+    const pseudoMoves = generatePseudoLegalMoves(
+      props,
+      props.location,
+      boardSquares
+    );
+  
+    // 2. Special handling for king safety (prevent illegal moves into check)
+    let legalMoves: number[];
+    if (pieceName === 'king') {
+      legalMoves = pseudoMoves.filter(
+        (target) =>
+          !boardContext.isSquareAttacked(
+            target,
+            boardContext.opponent(props.player!),
+            boardSquares
+          )
+      );
+    } else if (pieceName === 'pawn') {
+      // Handle pawn double-step: only allow if starting square hasn't moved
+      const startRow = props.player === 'player1' ? 6 : 1;
+      legalMoves = pseudoMoves.filter((target) => {
+        const row = Math.floor(props.location / 8);
+        // if pawn wants to move 2 squares, ensure it's from starting row
+        if (Math.abs(target - props.location) === 16 && row !== startRow) {
+          return false;
+        }
+        return true;
+      });
+    } else {
+      // TODO later: simulate move & ensure own king isn’t left in check
+      
+      legalMoves = pseudoMoves;
+    }
+  
+    setLegitimatePaths(legalMoves);
+    return legalMoves;
   };
   
-
-  // ----- EFFECTS -----
-  // Update state when props change
-  /*
-  useEffect(() => {
-    //setId(props.id);
-    //setName(props.name);
-    //setColor(props.color);
-    //setPlayer(props.player);
-   
-  }, [props.id, props.name, props.color, props.player, props.location]);
-  */
 
   // Recalculate legitimate moves when relevant state changes
   useEffect(() => {
     calculateLegitimatePaths();
   }, [props.name, props.location, props.player, Piece, boardSquares, hasMoved]);
+
+
 
   // ----- IMPERATIVE HANDLE -----
   useImperativeHandle(props.ref, () => ({

@@ -1,99 +1,142 @@
+import { type PieceType } from './context/BoardContext';
 
-export type ChessPiece = {
-    id: string;
-    name: string;
-    color: string;
-    hasMoved?: boolean;
-    location?: number;
-  };
-  type Board = ChessPiece[];
-  
-  // ROOK 
-  export const getRookMoves = (piece: ChessPiece, board: Board): number[] => {
-    if (piece.location === undefined) return [];
-    const { color, location } = piece;
-    const row = Math.floor(location / 8);
-    const col = location % 8;
-    const moves: number[] = [];
-  
-    const directions = [
-      { dr: -1, dc: 0 },
-      { dr: 1, dc: 0 },
-      { dr: 0, dc: -1 },
-      { dr: 0, dc: 1 },
-    ];
-  
-    for (const { dr, dc } of directions) {
-      let r = row + dr;
-      let c = col + dc;
-      while (r >= 0 && r < 8 && c >= 0 && c < 8) {
-        const index = r * 8 + c;
-        const target = board[index];
-        if (target.name === "Empty") {
-          moves.push(index);
-        } else if (target.color !== color) {
-          moves.push(index);
-          break;
-        } else break;
-        r += dr;
-        c += dc;
+export const generateSlidingMoves = (
+  directions: number[],
+  pos: number,
+  player: string,
+  squares: { piece: PieceType | null }[]
+): number[] => {
+  const moves: number[] = [];
+  for (const dir of directions) {
+    let target = pos + dir;
+    while (target >= 0 && target < 64) {
+      const tr = Math.floor(target / 8);
+      const tc = target % 8;
+      const pr = Math.floor((target - dir) / 8);
+      const pc = (target - dir) % 8;
+
+      // break if wrapped to a new row incorrectly
+      if (Math.abs(tr - pr) > 1 || Math.abs(tc - pc) > 1) break;
+
+      const targetPiece = squares[target]?.piece;
+      if (!targetPiece) {
+        moves.push(target);
+      } else {
+        if (targetPiece.player !== player) moves.push(target);
+        break;
+      }
+
+      target += dir;
+    }
+  }
+  return moves;
+};
+
+export const generatePseudoLegalMoves = (
+  piece: PieceType,
+  pos: number,
+  squares: { piece: PieceType | null }[]
+): number[] => {
+  const player = piece.player!;
+  const name = piece.name.toLowerCase();
+  const moves: number[] = [];
+
+  switch (name) {
+    case 'pawn': {
+      const dir = player === 'player1' ? -1 : 1;
+      const row = Math.floor(pos / 8);
+      const col = pos % 8;
+    
+      const forwardOne = pos + dir * 8;
+      // Move 1 square forward if empty
+      if (forwardOne >= 0 && forwardOne < 64 && !squares[forwardOne].piece) {
+        moves.push(forwardOne);
+    
+        // Move 2 squares forward if first move and path is clear
+        const startingRow = player === 'player1' ? 6 : 1;
+        const forwardTwo = pos + dir * 16;
+        if (row === startingRow && !squares[forwardTwo].piece) {
+          moves.push(forwardTwo);
+        }
+      }
+    
+      // Captures
+      for (const dc of [-1, 1]) {
+        const targetCol = col + dc;
+        const diag = pos + dir * 8 + dc;
+        if (targetCol >= 0 && targetCol < 8 && diag >= 0 && diag < 64) {
+          const targetPiece = squares[diag]?.piece;
+          if (targetPiece && targetPiece.player !== player) moves.push(diag);
+        }
+      }
+      break;
+    }
+    
+
+    case 'rook':
+      moves.push(...generateSlidingMoves([-8, 8, -1, 1], pos, player, squares));
+      break;
+
+    case 'bishop':
+      moves.push(...generateSlidingMoves([-9, -7, 7, 9], pos, player, squares));
+      break;
+
+    case 'queen':
+      moves.push(...generateSlidingMoves([-8, 8, -1, 1, -9, -7, 7, 9], pos, player, squares));
+      break;
+
+    case 'knight': {
+      const deltas = [
+        [2, 1], [2, -1], [-2, 1], [-2, -1],
+        [1, 2], [1, -2], [-1, 2], [-1, -2],
+      ];
+      const r = Math.floor(pos / 8);
+      const c = pos % 8;
+      for (const [dr, dc] of deltas) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+          const target = nr * 8 + nc;
+          const targetPiece = squares[target]?.piece;
+          if (!targetPiece || targetPiece.player !== player) moves.push(target);
+        }
+      }
+      break;
+    }
+
+    case 'king': {
+      const deltas = [-9, -8, -7, -1, 1, 7, 8, 9];
+      const kr = Math.floor(pos / 8);
+      const kc = pos % 8;
+      for (const delta of deltas) {
+        const target = pos + delta;
+        if (target < 0 || target >= 64) continue;
+        const tr = Math.floor(target / 8);
+        const tc = target % 8;
+        if (Math.abs(tr - kr) > 1 || Math.abs(tc - kc) > 1) continue;
+        const targetPiece = squares[target]?.piece;
+        if (!targetPiece || targetPiece.player !== player) moves.push(target);
+      }
+      break;
+    }
+  }
+
+  return moves;
+};
+
+export const isSquareAttacked = (
+  square: number,
+  byPlayer: string,
+  squares: { piece?: PieceType }[]
+): boolean => {
+  for (let i = 0; i < 64; i++) {
+    const piece = squares[i]?.piece;
+    if (piece && piece.player === byPlayer) {
+      const moves = generatePseudoLegalMoves(piece, i, squares as { piece: PieceType | null }[]);
+      if (moves.includes(square)) {
+        return true;
       }
     }
-    return moves;
-  };
-  
-  // PAWN
-  export const getPawnMoves = (piece: ChessPiece, board: Board): number[] => {
-    if (piece.location === undefined) return [];
-    const { color, location } = piece;
-    const row = Math.floor(location / 8);
-    const moves: number[] = [];
-  
-    const direction = color === "red" ? 1 : -1;
-    const forwardOne = location + direction * 8;
-    const forwardTwo = location + direction * 16;
-    const startingRow = color === "red" ? 1 : 6;
-  
-    if (forwardOne >= 0 && forwardOne < 64 && board[forwardOne].name === "Empty") {
-      moves.push(forwardOne);
-      if (row === startingRow && board[forwardTwo].name === "Empty") {
-        moves.push(forwardTwo);
-      }
-    }
-  
-    const captureLeft = location + direction * 8 - 1;
-    const captureRight = location + direction * 8 + 1;
-  
-    if (
-      captureLeft >= 0 &&
-      captureLeft < 64 &&
-      captureLeft % 8 !== 7 &&
-      board[captureLeft].name !== "Empty" &&
-      board[captureLeft].color !== color
-    ) {
-      moves.push(captureLeft);
-    }
-    if (
-      captureRight >= 0 &&
-      captureRight < 64 &&
-      captureRight % 8 !== 0 &&
-      board[captureRight].name !== "Empty" &&
-      board[captureRight].color !== color
-    ) {
-      moves.push(captureRight);
-    }
-  
-    return moves;
-  };
-
-  export const getLegalMoves = (piece: ChessPiece, board: Board): number[] => {
-    switch (piece.name) {
-      case "Rook":
-        return getRookMoves(piece, board);
-      case "Pawn":
-        return getPawnMoves(piece, board);
-      default:
-        return [];
-    }
-  };
-  
+  }
+  return false;
+};

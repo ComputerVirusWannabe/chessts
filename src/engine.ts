@@ -19,6 +19,78 @@ export const isSquareAttacked = (
   return false;
 };
 
+export const calculateCastlingMovesSimple_NOT_USED = (piece: PieceType, board: SquareType[]): number[] => {
+    const moves: number[] = [];
+    const { location, player, hasMoved } = piece;
+    if (!player || hasMoved) return moves;
+  
+    const row = player === 'player1' ? 7 : 0; // adjust for player convention.
+    //RIght now this assume player1 is on row 7 and player2 on row 0 which may be flipped later.
+  
+    // Kingside
+    const kingsideRookIndex = row * 8 + 7;
+    const kingsidePath = [row * 8 + 5, row * 8 + 6];
+    if (
+      board[kingsideRookIndex].piece?.name.toLowerCase() === 'rook' &&
+      !board[kingsideRookIndex].piece?.hasMoved &&
+      kingsidePath.every(sq => !board[sq].piece) &&
+      kingsidePath.every(sq => !isSquareAttacked(sq, opponent(player), board))
+    ) {
+      moves.push(location + 2);
+    }
+  
+    // Queenside
+    const queensideRookIndex = row * 8 + 0;
+    const queensidePath = [row * 8 + 1, row * 8 + 2, row * 8 + 3];
+    if (
+      board[queensideRookIndex].piece?.name.toLowerCase() === 'rook' &&
+      !board[queensideRookIndex].piece?.hasMoved &&
+      queensidePath.slice(0, 2).every(sq => !board[sq].piece) &&
+      queensidePath.slice(0, 2).every(sq => !isSquareAttacked(sq, opponent(player), board))
+    ) {
+      moves.push(location - 2);
+    }
+  
+    return moves;
+  };
+
+  export const calculateCastlingMoves = (piece: PieceType, board: SquareType[]): number[] => {
+    const moves: number[] = [];
+    const { location, player, hasMoved } = piece;
+    if (!player || hasMoved || piece.name.toLowerCase() !== 'king') return moves;
+  
+    const row = Math.floor(location / 8); // king's current row
+    const opponentPlayer = opponent(player);
+  
+    // Find all rooks of the same player on the same row
+    const rooks = board
+      .map((sq, idx) => ({ sq, idx }))
+      .filter(({ sq, idx }) => 
+        sq.piece?.player === player &&
+        sq.piece.name.toLowerCase() === 'rook' &&
+        !sq.piece.hasMoved &&
+        Math.floor(idx / 8) === row
+      );
+  
+    for (const { sq, idx } of rooks) {
+      const direction = idx > location ? 1 : -1; // right = kingside, left = queenside
+      const pathIndices = [];
+      for (let i = location + direction; i !== idx; i += direction) {
+        pathIndices.push(i);
+      }
+  
+      // Check path is empty
+      if (pathIndices.every(i => !board[i].piece) &&
+          pathIndices.every(i => !isSquareAttacked(i, opponentPlayer, board))) {
+        // Move king two squares towards the rook
+        moves.push(location + 2 * direction);
+      }
+    }
+  
+    return moves;
+  };
+  
+
 // Filter pseudo-legal moves to actual legal moves (king safety)
 export const filterLegalMoves = (
   piece: PieceType,

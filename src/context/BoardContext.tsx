@@ -68,10 +68,10 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>('player1');
 
   // Move a piece
-  const movePiece = (fromIndex: number, toIndex: number) => {
+  const movePiece_OLD_NOT_USED = (fromIndex: number, toIndex: number) => {
     setSquares(prev => {
-      const newSquares = prev.slice(); // shallow copy is safer
-      const movingPiece = { ...newSquares[fromIndex].piece!, location: toIndex };
+      const newSquares: SquareType[] = prev.slice(); // shallow copy is safer
+      const movingPiece = { ...newSquares[fromIndex].piece!, location: toIndex, hasMoved: true };
       newSquares[toIndex] = { piece: movingPiece };
       newSquares[fromIndex] = { piece: null };
   
@@ -103,27 +103,125 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }, 0);
   };
+
+  const movePiece = (fromIndex: number, toIndex: number) => {
+    console.log('movePiece triggered', { fromIndex, toIndex, movingPiece: squares[fromIndex].piece });
+    setSquares(prev => {
+      const newSquares = prev.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
+  
+      const movingPiece = { ...newSquares[fromIndex].piece!, location: toIndex, hasMoved: true };
+      newSquares[toIndex].piece = movingPiece;
+      newSquares[fromIndex].piece = null;
+  
+      // --- Handle Castling: move the rook if king moves 2 squares ---
+      if (movingPiece.name.toLowerCase() === 'king') {
+        const delta = toIndex - fromIndex;
+        const row = movingPiece.player === 'player1' ? 7 : 0;
+  
+        if (delta === 2) {
+          // Kingside
+          const rookFrom = row * 8 + 7;
+          const rookTo = row * 8 + 5;
+
+          console.log('Castling detected:', { fromIndex, toIndex, isKingside: true, rookFrom, rookTo });
+          console.log('Updated squares:', newSquares);
+
+          const rookPiece = { ...newSquares[rookFrom].piece!, location: rookTo, hasMoved: true };
+          newSquares[rookTo].piece = rookPiece;
+          newSquares[rookFrom].piece = null;
+        } else if (delta === -2) {
+          // Queenside
+          const rookFrom = row * 8 + 0;
+          const rookTo = row * 8 + 3;
+          const rookPiece = { ...newSquares[rookFrom].piece!, location: rookTo, hasMoved: true };
+          newSquares[rookTo].piece = rookPiece;
+          newSquares[rookFrom].piece = null;
+        }
+      }
+  
+      // Check king safety for highlighting
+      const nextPlayer = Engine.opponent(currentTurn);
+      const kingSquare = newSquares.findIndex(
+        sq => sq.piece?.player === nextPlayer && sq.piece.name.toLowerCase() === 'king'
+      );
+      setKingInCheckSquare(
+        kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, Engine.opponent(nextPlayer), newSquares)
+          ? kingSquare
+          : null
+      );
+  
+      return newSquares;
+    });
+  
+    setCurrentTurn(prev => Engine.opponent(prev));
+    setSelectedPieceId(null);
+    setHighlightedSquares([]);
+  
+    // --- End-of-game checks ---
+    setTimeout(() => {
+      const nextPlayer = Engine.opponent(currentTurn);
+      if (Engine.isCheckmate(nextPlayer, squares)) {
+        alert(`${nextPlayer} is checkmated!`);
+      } else if (Engine.isStalemate(nextPlayer, squares)) {
+        alert('Stalemate!');
+      }
+    }, 0);
+  };
   
 
   const handleSquareClick = (toIndex: number) => {
-    if (!selectedPieceId) return;
-
     const fromIndex = squares.findIndex(sq => sq.piece?.id === selectedPieceId);
-    if (fromIndex === -1) return;
-
-    const piece = squares[fromIndex].piece!;
-    const pseudoMoves = generatePseudoLegalMoves(piece, fromIndex, squares);
-    const legalMoves = Engine.filterLegalMoves(piece, fromIndex, pseudoMoves, squares);
-
-    if (!legalMoves.includes(toIndex)) {
-      setSelectedPieceId(null);
-      setHighlightedSquares([]);
+  
+    // If no piece is selected, select the piece
+    if (fromIndex === -1) {
+      const clickedPiece = squares[toIndex].piece;
+      if (clickedPiece && clickedPiece.player === currentTurn) {
+        const pseudoMoves = generatePseudoLegalMoves(clickedPiece, toIndex, squares);
+  
+        // Include castling moves for the king
+        if (clickedPiece.name.toLowerCase() === 'king' && !clickedPiece.hasMoved) {
+          const castlingMoves = Engine.calculateCastlingMoves(clickedPiece, squares);
+          pseudoMoves.push(...castlingMoves);
+        }
+  
+        const legalMoves = Engine.filterLegalMoves(clickedPiece, toIndex, pseudoMoves, squares);
+        setSelectedPieceId(clickedPiece.id);
+        setHighlightedSquares(legalMoves);
+        console.log('Piece selected via square:', clickedPiece.id, 'Legal moves:', legalMoves);
+      }
       return;
     }
-
+  
+    // If a piece is already selected, attempt to move it
+    const piece = squares[fromIndex].piece!;
+    let pseudoMoves = generatePseudoLegalMoves(piece, fromIndex, squares);
+  
+    // Include castling moves for the king
+    if (piece.name.toLowerCase() === 'king' && !piece.hasMoved) {
+      const castlingMoves = Engine.calculateCastlingMoves(piece, squares);
+      pseudoMoves.push(...castlingMoves);
+    }
+  
+    const legalMoves = Engine.filterLegalMoves(piece, fromIndex, pseudoMoves, squares);
+  
+    if (!legalMoves.includes(toIndex)) {
+      // Invalid move, deselect
+      setSelectedPieceId(null);
+      setHighlightedSquares([]);
+      console.log('Invalid move attempted.');
+      return;
+    }
+  
+    if (piece.name.toLowerCase() === 'king' && Math.abs(toIndex - fromIndex) === 2) {
+      console.log('Castling detected:', { fromIndex, toIndex });
+    }
+  
+    // Move the piece, let it handle the logic including castling
     movePiece(fromIndex, toIndex);
+    setSelectedPieceId(null);
+    setHighlightedSquares([]);
   };
-
+  
   const handlePieceClick = (id: string, location: number, paths: number[]) => {
     const piece = squares.find(sq => sq.piece?.id === id)?.piece;
     if (!piece || piece.player !== currentTurn) return;

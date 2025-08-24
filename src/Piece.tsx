@@ -5,6 +5,7 @@ import { type PieceType } from './context/BoardContext';
 import { generatePseudoLegalMoves } from './moveGenerators';
 import * as Engine from './engine';
 
+
 export type PiecePropsType = PieceType & {
   ref?: React.Ref<any>;
 };
@@ -32,6 +33,12 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     }
   
     const pseudoMoves = generatePseudoLegalMoves(props, props.location, boardSquares);
+
+  // Castling logic for the king
+  if (pieceName === 'king' && !hasMoved) {
+    const castlingMoves = Engine.calculateCastlingMoves(props, boardSquares);
+    pseudoMoves.push(...castlingMoves);
+  }
   
     // Use Engine to filter legal moves (checks king safety automatically)
     const legalMoves = Engine.filterLegalMoves(props, props.location, pseudoMoves, boardSquares);
@@ -52,8 +59,10 @@ const Piece: React.FC<PiecePropsType> = (props) => {
 
   // ----- HANDLER -----
   const handleClick = () => {
-    const paths = calculateLegitimatePaths();
-    boardContext.handlePieceClick(props.id, props.location, paths);
+    if (!boardContext) return;
+  
+    // Delegate to the board context's square click handler
+    boardContext.handleSquareClick(props.location);
   };
 
   // ----- STYLES -----

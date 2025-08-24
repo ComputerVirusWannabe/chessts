@@ -35,20 +35,10 @@ type SquarePropsType = {
     : darkSquareColor;
   */
     let backgroundColor: string;
-
-    if (isHighlighted) {
-      backgroundColor = 'yellow';
-    } else if (isLightSquare) {
-      backgroundColor = lightSquareColor;
-    } else {
-      backgroundColor = darkSquareColor;
-    }
-
-    
-    let border: string = '2px solid black';
+    const border = isHighlighted ? '2px solid black' : '1px solid transparent';
 
     if (isKingInCheckHere) {
-      backgroundColor = 'rgba(255, 0, 0, 0.3)'; // Light red background for check
+      backgroundColor = 'lightgreen'; // King in check highlight
     } else if (isHighlighted) {
       backgroundColor = 'yellow';
     } else if (isLightSquare) {
@@ -69,9 +59,13 @@ type SquarePropsType = {
       border,
     };
     
+    const kingPulse = isKingInCheckHere ? 'king-in-check' : '';
+
     
     return (
-        <div style={styles} onClick={() => handleSquareClick(index)}
+        <div style={styles} 
+            className={kingPulse}
+            onClick={() => handleSquareClick(index)}
         >
             {id && (
                 <Piece

@@ -50,7 +50,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
       boardSquares
     );
   
-    // 2. Special handling for king safety (prevent illegal moves into check)
+    // Special handling for king safety (prevent illegal moves into check)
     let legalMoves: number[];
     if (pieceName === 'king') {
       legalMoves = pseudoMoves.filter(
@@ -81,9 +81,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     setLegitimatePaths(legalMoves);
     return legalMoves;
   };
-  
 
-  // Recalculate legitimate moves when relevant state changes
   useEffect(() => {
     calculateLegitimatePaths();
   }, [props.name, props.location, props.player, Piece, boardSquares, hasMoved]);

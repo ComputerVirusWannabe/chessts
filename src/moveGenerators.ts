@@ -7,30 +7,40 @@ export const generateSlidingMoves = (
   squares: { piece: PieceType | null }[]
 ): number[] => {
   const moves: number[] = [];
+  const row = Math.floor(pos / 8);
+  const col = pos % 8;
+
   for (const dir of directions) {
     let target = pos + dir;
-    while (target >= 0 && target < 64) {
-      const tr = Math.floor(target / 8);
-      const tc = target % 8;
-      const pr = Math.floor((target - dir) / 8);
-      const pc = (target - dir) % 8;
 
-      // break if wrapped to a new row incorrectly
-      if (Math.abs(tr - pr) > 1 || Math.abs(tc - pc) > 1) break;
+    while (target >= 0 && target < 64) {
+      const targetRow = Math.floor(target / 8);
+      const targetCol = target % 8;
+
+      // Check for wrapping: horizontal moves must stay on same row
+      if (dir === -1 || dir === 1) {
+        if (targetRow !== row) break;
+      }
+      // Diagonal moves: row/col step must match direction
+      if (Math.abs(dir) === 7 || Math.abs(dir) === 9) {
+        if (Math.abs(targetRow - row) !== Math.abs(targetCol - col)) break;
+      }
 
       const targetPiece = squares[target]?.piece;
       if (!targetPiece) {
         moves.push(target);
       } else {
         if (targetPiece.player !== player) moves.push(target);
-        break;
+        break; // stop at first piece
       }
 
       target += dir;
     }
   }
+
   return moves;
 };
+
 
 export const generatePseudoLegalMoves = (
   piece: PieceType,

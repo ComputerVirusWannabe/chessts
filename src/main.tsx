@@ -10,7 +10,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
      <ThemeProvider>
       <BoardProvider>
-    <Board />
+        <Board />
       </BoardProvider>
     </ThemeProvider>
   </StrictMode>,

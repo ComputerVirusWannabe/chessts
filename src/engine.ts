@@ -19,45 +19,10 @@ export const isSquareAttacked = (
   return false;
 };
 
-export const calculateCastlingMovesSimple_NOT_USED = (piece: PieceType, board: SquareType[]): number[] => {
-    const moves: number[] = [];
-    const { location, player, hasMoved } = piece;
-    if (!player || hasMoved) return moves;
-  
-    const row = player === 'player1' ? 7 : 0; // adjust for player convention.
-    //RIght now this assume player1 is on row 7 and player2 on row 0 which may be flipped later.
-  
-    // Kingside
-    const kingsideRookIndex = row * 8 + 7;
-    const kingsidePath = [row * 8 + 5, row * 8 + 6];
-    if (
-      board[kingsideRookIndex].piece?.name.toLowerCase() === 'rook' &&
-      !board[kingsideRookIndex].piece?.hasMoved &&
-      kingsidePath.every(sq => !board[sq].piece) &&
-      kingsidePath.every(sq => !isSquareAttacked(sq, opponent(player), board))
-    ) {
-      moves.push(location + 2);
-    }
-  
-    // Queenside
-    const queensideRookIndex = row * 8 + 0;
-    const queensidePath = [row * 8 + 1, row * 8 + 2, row * 8 + 3];
-    if (
-      board[queensideRookIndex].piece?.name.toLowerCase() === 'rook' &&
-      !board[queensideRookIndex].piece?.hasMoved &&
-      queensidePath.slice(0, 2).every(sq => !board[sq].piece) &&
-      queensidePath.slice(0, 2).every(sq => !isSquareAttacked(sq, opponent(player), board))
-    ) {
-      moves.push(location - 2);
-    }
-  
-    return moves;
-  };
-
   export const calculateCastlingMoves = (piece: PieceType, board: SquareType[]): number[] => {
     const moves: number[] = [];
     const { location, player, hasMoved } = piece;
-    if (!player || hasMoved || piece.name.toLowerCase() !== 'king') return moves;
+    if (!player || hasMoved || piece.name !== 'king') return moves;
   
     const row = Math.floor(location / 8); // king's current row
     const opponentPlayer = opponent(player);
@@ -67,7 +32,7 @@ export const calculateCastlingMovesSimple_NOT_USED = (piece: PieceType, board: S
       .map((sq, idx) => ({ sq, idx }))
       .filter(({ sq, idx }) => 
         sq.piece?.player === player &&
-        sq.piece.name.toLowerCase() === 'rook' &&
+        sq.piece.name === 'rook' &&
         !sq.piece.hasMoved &&
         Math.floor(idx / 8) === row
       );
@@ -104,7 +69,7 @@ export const filterLegalMoves = (
     tempBoard[fromIndex].piece = null;
 
     const kingSquare = tempBoard.findIndex(
-      sq => sq.piece?.player === piece.player && sq.piece.name.toLowerCase() === 'king'
+      sq => sq.piece?.player === piece.player && sq.piece.name === 'king'
     );
 
     return !isSquareAttacked(kingSquare, opponent(piece.player!), tempBoard);
@@ -113,7 +78,7 @@ export const filterLegalMoves = (
 
 export const isKingInCheck = (player: 'player1' | 'player2', squares: SquareType[]): boolean => {
   const kingSquare = squares.findIndex(
-    sq => sq.piece?.player === player && sq.piece.name.toLowerCase() === 'king'
+    sq => sq.piece?.player === player && sq.piece.name === 'king'
   );
   if (kingSquare === -1) return false;
   return isSquareAttacked(kingSquare, opponent(player), squares);

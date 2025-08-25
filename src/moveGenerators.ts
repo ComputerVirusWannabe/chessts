@@ -1,5 +1,5 @@
-import { type PieceType } from './context/BoardContext';
-
+import { useContext } from 'react';
+import { BoardContext, type PieceType } from './context/BoardContext';
 export const generateSlidingMoves = (
   directions: number[],
   pos: number,
@@ -17,11 +17,9 @@ export const generateSlidingMoves = (
       const targetRow = Math.floor(target / 8);
       const targetCol = target % 8;
 
-      // Check for wrapping: horizontal moves must stay on same row
       if (dir === -1 || dir === 1) {
         if (targetRow !== row) break;
       }
-      // Diagonal moves: row/col step must match direction
       if (Math.abs(dir) === 7 || Math.abs(dir) === 9) {
         if (Math.abs(targetRow - row) !== Math.abs(targetCol - col)) break;
       }
@@ -31,7 +29,7 @@ export const generateSlidingMoves = (
         moves.push(target);
       } else {
         if (targetPiece.player !== player) moves.push(target);
-        break; // stop at first piece
+        break;
       }
 
       target += dir;
@@ -41,47 +39,55 @@ export const generateSlidingMoves = (
   return moves;
 };
 
-
 export const generatePseudoLegalMoves = (
   piece: PieceType,
   pos: number,
-  squares: { piece: PieceType | null }[]
+  squares: { piece: PieceType | null }[],
+  enPassantSquare?: number
 ): number[] => {
-  const player = piece.player!;
-  const name = piece.name.toLowerCase();
   const moves: number[] = [];
+  const player = piece.player!;
+  const name = piece.name;
 
   switch (name) {
     case 'pawn': {
       const dir = player === 'player1' ? -1 : 1;
       const row = Math.floor(pos / 8);
       const col = pos % 8;
-    
+
+      // Forward moves
       const forwardOne = pos + dir * 8;
-      // Move 1 square forward if empty
       if (forwardOne >= 0 && forwardOne < 64 && !squares[forwardOne].piece) {
         moves.push(forwardOne);
-    
-        // Move 2 squares forward if first move and path is clear
+
+        // Starting double move
         const startingRow = player === 'player1' ? 6 : 1;
         const forwardTwo = pos + dir * 16;
         if (row === startingRow && !squares[forwardTwo].piece) {
           moves.push(forwardTwo);
         }
       }
-    
-      // Captures
+
+      // Diagonal captures
       for (const dc of [-1, 1]) {
         const targetCol = col + dc;
         const diag = pos + dir * 8 + dc;
         if (targetCol >= 0 && targetCol < 8 && diag >= 0 && diag < 64) {
           const targetPiece = squares[diag]?.piece;
-          if (targetPiece && targetPiece.player !== player) moves.push(diag);
+          if (targetPiece && targetPiece.player !== player) {
+            moves.push(diag);
+          }
+
+          // En passant
+          const enPassantRow = player === 'player1' ? 3 : 4; // fifth rank
+          if (row === enPassantRow && diag === enPassantSquare) {
+              moves.push(diag);
+          }
         }
       }
       break;
     }
-    
+
 
     case 'rook':
       moves.push(...generateSlidingMoves([-8, 8, -1, 1], pos, player, squares));

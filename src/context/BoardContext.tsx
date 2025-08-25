@@ -105,6 +105,26 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         hasMoved: true
       };
   
+      // Check if new piece is putting opponent king in check
+      const opponent = Engine.opponent(player);
+      const kingSquare = newSquares.findIndex(
+        sq => sq.piece?.player === opponent && sq.piece.name === 'king'
+      );
+      setKingInCheckSquare(
+        kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, player, newSquares)
+          ? kingSquare
+          : null
+      );
+  
+      // Check for checkmate or stalemate
+      setTimeout(() => {
+        if (Engine.isCheckmate(opponent, newSquares)) {
+          alert(`${opponent} is checkmated!`);
+        } else if (Engine.isStalemate(opponent, newSquares)) {
+          alert('Stalemate!');
+        }
+      }, 0);
+  
       return newSquares;
     });
   
@@ -112,7 +132,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setPromotionPawn(null);
   
     // Switch turn
-    setCurrentTurn(prev => Engine.opponent(prev));
+    setCurrentTurn(Engine.opponent(player));
   
     // Reset selection and highlights
     setSelectedPieceId(null);
@@ -120,6 +140,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
     console.log(`Pawn promoted at index ${index} to ${piece}`);
   };
+  
   
 
   const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number) => {

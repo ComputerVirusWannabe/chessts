@@ -1,6 +1,8 @@
 import React, { createContext, useState, type ReactNode } from 'react';
 import { generatePseudoLegalMoves } from '../moveGenerators';
 import * as Engine from '../engine';
+import PromotionDialog from '../PromotionDialog';
+import { v4 as uuidv4 } from 'uuid';
 
 export type PieceType = {
   id: string;
@@ -27,6 +29,9 @@ type BoardContextType = {
   kingInCheckSquare: number | null;
   enPassantSquare: number | null;
   setEnPassantSquare: (pos: number | null) => void;
+  promotionPawn: { index: number; player: 'player1' | 'player2' } | null;
+  setPromotionPawn: React.Dispatch<React.SetStateAction<{ index: number; player: 'player1' | 'player2' } | null>>;
+  promotePawn: (pieceName: 'queen' | 'rook' | 'bishop' | 'knight') => void;
 };
 
 export const BoardContext = createContext<BoardContextType | undefined>(undefined);
@@ -35,7 +40,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
 
   const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
-    id: `${name}-${player}-${location}`,
+    id: uuidv4(),
     name,
     color: player === 'player1' ? 'grey' : 'red',
     player,
@@ -74,6 +79,49 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const [enPassantSquare, setEnPassantSquare] = useState<number | null>(null);
 
+  const [promotionPawn, setPromotionPawn] = useState<{
+    index: number;
+    player: 'player1' | 'player2';
+  } | null>(null);
+
+  const promotePawn = (piece: 'queen' | 'rook' | 'bishop' | 'knight') => {
+    if (!promotionPawn) return;
+  
+    const { index, player } = promotionPawn;
+  
+    setSquares(prevSquares => {
+      const newSquares = prevSquares.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
+  
+      const oldPawn = newSquares[index].piece;
+      if (!oldPawn) return newSquares;
+  
+      // Replace pawn with chosen piece
+      newSquares[index].piece = {
+        id: uuidv4(),
+        name: piece,
+        color: oldPawn.color,
+        player: oldPawn.player,
+        location: index,
+        hasMoved: true
+      };
+  
+      return newSquares;
+    });
+  
+    // Clear promotion state
+    setPromotionPawn(null);
+  
+    // Switch turn
+    setCurrentTurn(prev => Engine.opponent(prev));
+  
+    // Reset selection and highlights
+    setSelectedPieceId(null);
+    setHighlightedSquares([]);
+  
+    console.log(`Pawn promoted at index ${index} to ${piece}`);
+  };
+  
+
   const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number) => {
     const movingPiece = { ...squares[fromIndex].piece!, location: toIndex, hasMoved: true };
     const targetPiece = squares[toIndex].piece;
@@ -81,19 +129,17 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Clone board
     const newSquares = squares.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
   
-    // --- Move piece on board ---
+    // --- Move piece ---
     newSquares[toIndex].piece = movingPiece;
     newSquares[fromIndex].piece = null;
   
-    // --- Captures ---
+    // --- Normal capture ---
     let updatedCapturedPieces = [...capturedPieces];
-  
-    // Normal capture
     if (targetPiece) {
-      updatedCapturedPieces.push({ ...targetPiece });
+      updatedCapturedPieces.push({ ...targetPiece, id: uuidv4() });
     }
   
-    // En Passant capture
+    // --- En Passant capture ---
     if (movingPiece.name === 'pawn' && enPassantSquare !== null && toIndex === enPassantSquare) {
       const capturedIndex = movingPiece.player === 'player1' ? toIndex + 8 : toIndex - 8;
       const capturedPawn = newSquares[capturedIndex].piece;
@@ -112,7 +158,14 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       (movingPiece.player === 'player2' && toIndex >= 56 && toIndex <= 63);
   
     if (movingPiece.name === 'pawn' && isPromotionRow) {
-      movingPiece.name = 'queen'; // auto-promote
+      // show pawn on final rank
+      setSquares(newSquares);
+  
+      // trigger promotion UI
+      setPromotionPawn({ index: toIndex, player: movingPiece.player as 'player1' | 'player2' });
+  
+      // stop further updates until promotion is handled
+      return;
     }
   
     // --- Castling ---
@@ -135,28 +188,25 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
   
-    // --- Update turn ---
-    const nextTurn = Engine.opponent(currentTurn);
-    setCurrentTurn(nextTurn);
-  
-    // --- Update board ---
+    // --- Update board and turn ---
     setSquares(newSquares);
+    setCurrentTurn(Engine.opponent(currentTurn));
   
     // --- Reset selection and highlights ---
     setSelectedPieceId(null);
     setHighlightedSquares([]);
   
-    // --- King check highlighting ---
+    // --- King in check highlighting ---
     const kingSquare = newSquares.findIndex(
-      sq => sq.piece?.player === nextTurn && sq.piece.name === 'king'
+      sq => sq.piece?.player === Engine.opponent(currentTurn) && sq.piece.name === 'king'
     );
     setKingInCheckSquare(
-      kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, Engine.opponent(nextTurn), newSquares)
+      kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, currentTurn, newSquares)
         ? kingSquare
         : null
     );
   
-    // --- Update en passant square ---
+    // --- En passant square ---
     if (movingPiece.name === 'pawn' && Math.abs(toIndex - fromIndex) === 16) {
       console.log('Setting en passant square');
       setEnPassantSquare((fromIndex + toIndex) / 2);
@@ -167,13 +217,14 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
     // --- End-of-game checks ---
     setTimeout(() => {
-      if (Engine.isCheckmate(nextTurn, newSquares)) {
-        alert(`${nextTurn} is checkmated!`);
-      } else if (Engine.isStalemate(nextTurn, newSquares)) {
+      if (Engine.isCheckmate(Engine.opponent(currentTurn), newSquares)) {
+        alert(`${Engine.opponent(currentTurn)} is checkmated!`);
+      } else if (Engine.isStalemate(Engine.opponent(currentTurn), newSquares)) {
         alert('Stalemate!');
       }
     }, 0);
   };
+  
   
   
   
@@ -227,7 +278,17 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setHighlightedSquares([]);
       return;
     }
-  
+    
+    //Pawn Promotion check:
+    if (piece.name === 'pawn') {
+      const finalRank = piece.player === 'player1' ? 0 : 7;
+      if (toIndex / 8 === finalRank) {
+        console.log( "Pawn promotion triggered!");
+        setPromotionPawn({ index: toIndex, player: piece.player as 'player1' | 'player2' });
+        return; // stop further move until promotion is handled
+      }
+    }
+
     // Valid move, perform it
     movePiece(fromIndex, toIndex, enPassantSquare as number | undefined);
   
@@ -259,9 +320,23 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         capturedPieces,
         enPassantSquare,
         setEnPassantSquare,
+        promotionPawn,
+        setPromotionPawn,
+        promotePawn,
       }}
     >
       {children}
+      {promotionPawn && (
+        <>
+         {console.log('Rendering promotion dialog for player', promotionPawn.player)}
+        <PromotionDialog
+          //player={promotionPawn.player}
+          
+          onSelect={piece => {console.log('Promotion selected:', piece); 
+          promotePawn(piece as 'queen' | 'rook' | 'bishop' | 'knight')}}
+        />
+        </>
+      )}
     </BoardContext.Provider>
   );
 };

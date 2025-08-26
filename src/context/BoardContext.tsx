@@ -1,9 +1,10 @@
 import React, { createContext, useState, type ReactNode } from 'react';
-import { generatePseudoLegalMoves } from '../moveGenerators';
-import * as Engine from '../engine';
-import PromotionDialog from '../PromotionDialog';
+import { generatePseudoLegalMoves } from '../engine/moveGenerators';
+import * as Engine from '../engine/logic';
+import PromotionDialog from '../components/PromotionDialog';
 import { v4 as uuidv4 } from 'uuid';
-
+import { useEffect } from 'react';
+import { StockfishEngine } from '../ai/StockfishEngine';
 export type PieceType = {
   id: string;
   name: string; // 'pawn', 'rook', etc.
@@ -11,6 +12,21 @@ export type PieceType = {
   player: 'player1' | 'player2' | null;
   location: number;
   hasMoved?: boolean;
+};
+
+type Move = {
+  from: number;
+  to: number;
+  piece: PieceType;
+  captured?: PieceType;
+};
+
+
+type CastlingRights = {
+  K: boolean; // White kingside
+  Q: boolean; // White queenside
+  k: boolean; // Black kingside
+  q: boolean; // Black queenside
 };
 
 export type SquareType = {
@@ -79,10 +95,61 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const [enPassantSquare, setEnPassantSquare] = useState<number | null>(null);
 
+  const [castlingRights, setCastlingRights] = useState<CastlingRights>({
+    K: true,
+    Q: true,
+    k: true,
+    q: true,
+  });
+
+  const [lastMove, setLastMove] = useState<Move | null>(null);
+
+  
+
   const [promotionPawn, setPromotionPawn] = useState<{
     index: number;
     player: 'player1' | 'player2';
   } | null>(null);
+
+  const stockfish = new StockfishEngine();
+  useEffect(() => {
+    stockfish.init(); // run handshake once
+  }, []);
+  
+  useEffect(() => {
+    if (currentTurn !== "player2") return; // only AI's turn
+  
+    const fen = Engine.squaresToFEN(
+      squares,
+      currentTurn,
+      lastMove as Move | undefined,
+      0,
+      1
+    );
+  
+    stockfish.getBestMove(fen, 10).then((bestMove) => {
+      const fromIndex = Engine.squareNameToIndex(bestMove.slice(0, 2));
+      const toIndex = Engine.squareNameToIndex(bestMove.slice(2, 4));
+  
+      // Determine if this is a promotion move
+      let promotionPiece: "queen" | "rook" | "bishop" | "knight" | undefined;
+      if (bestMove.length === 5) {
+        promotionPiece =
+          bestMove[4] === "q" ? "queen" :
+          bestMove[4] === "r" ? "rook" :
+          bestMove[4] === "b" ? "bishop" :
+          "knight";
+      }
+  
+      // Move piece and handle promotion in one step
+      movePiece(fromIndex, toIndex, undefined, promotionPiece);
+    });
+  }, [currentTurn]);
+  
+  function castlingRightsToString(c: CastlingRights): string {
+    const s = (c.K ? "K" : "") + (c.Q ? "Q" : "") + (c.k ? "k" : "") + (c.q ? "q" : "");
+    return s || "-";
+  }
 
   const promotePawn = (piece: 'queen' | 'rook' | 'bishop' | 'knight') => {
     if (!promotionPawn) return;
@@ -141,9 +208,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     console.log(`Pawn promoted at index ${index} to ${piece}`);
   };
   
-  
-
-  const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number) => {
+  const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number, promotionPiece?: "queen" | "rook" | "bishop" | "knight") => {
     const movingPiece = { ...squares[fromIndex].piece!, location: toIndex, hasMoved: true };
     const targetPiece = squares[toIndex].piece;
   
@@ -174,20 +239,20 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCapturedPieces(updatedCapturedPieces);
   
     // --- Pawn promotion ---
-    const isPromotionRow =
-      (movingPiece.player === 'player1' && toIndex >= 0 && toIndex <= 7) ||
-      (movingPiece.player === 'player2' && toIndex >= 56 && toIndex <= 63);
-  
-    if (movingPiece.name === 'pawn' && isPromotionRow) {
-      // show pawn on final rank
+    // --- Pawn promotion ---
+  const isPromotionRow =
+  (movingPiece.player === 'player1' && toIndex >= 0 && toIndex <= 7) ||
+  (movingPiece.player === 'player2' && toIndex >= 56 && toIndex <= 63);
+
+  if (movingPiece.name === 'pawn' && isPromotionRow) {
+    if (promotionPiece) {
+      movingPiece.name = promotionPiece; // promote immediately
+    } else {
       setSquares(newSquares);
-  
-      // trigger promotion UI
       setPromotionPawn({ index: toIndex, player: movingPiece.player as 'player1' | 'player2' });
-  
-      // stop further updates until promotion is handled
       return;
     }
+  }
   
     // --- Castling ---
     if (movingPiece.name === 'king') {
@@ -229,12 +294,14 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
     // --- En passant square ---
     if (movingPiece.name === 'pawn' && Math.abs(toIndex - fromIndex) === 16) {
-      console.log('Setting en passant square');
       setEnPassantSquare((fromIndex + toIndex) / 2);
     } else {
-      console.log('Clearing en passant square');
       setEnPassantSquare(null);
     }
+  
+    // --- Track lastMove for FEN ---
+    const lastMoveObj: Move = { from: fromIndex, to: toIndex, piece: movingPiece, captured: targetPiece || undefined };
+    setLastMove(lastMoveObj);
   
     // --- End-of-game checks ---
     setTimeout(() => {
@@ -246,10 +313,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, 0);
   };
   
-  
-  
-  
-
 
   const handleSquareClick = (toIndex: number) => {
     const clickedSquare = squares[toIndex];

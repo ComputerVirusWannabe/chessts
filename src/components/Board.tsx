@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import Square from './Square';
+import StartGame from './StartGame';
 import { BoardContext } from '../context/BoardContext';
 import { ThemeContext } from '../context/ThemeContext';
 import CapturedPieces, { type CapturedPiece } from './CapturedPieces';
@@ -9,8 +10,11 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { squares, capturedPieces, currentTurn } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn } = boardContext;
   const themeContext = useContext(ThemeContext);
+
+  // Show StartGame if player hasn't chosen a side yet
+  if (!humanPlayer) return <StartGame />;
 
   const toggleTheme = () => {
     if (themeContext) {
@@ -18,16 +22,21 @@ const Board: React.FC = () => {
     }
   };
 
-  // Filter captured pieces correctly
+  // Separate captured pieces for top/bottom
   const player1Captured: CapturedPiece[] = capturedPieces.filter(p => p.player === 'player1'); // pieces lost by player1
   const player2Captured: CapturedPiece[] = capturedPieces.filter(p => p.player === 'player2'); // pieces lost by player2
 
+  // Flip board if human is player2
+  const renderSquares = humanPlayer === 'player1' ? squares : [...squares].reverse();
+
   return (
     <div style={{ textAlign: 'center' }}>
+      {/* Theme toggle */}
       <button onClick={toggleTheme} style={{ marginBottom: '10px' }}>
         Toggle Theme
       </button>
 
+      {/* Current turn display */}
       <div
         className={`px-4 py-1 rounded-xl font-semibold shadow-md ${
           currentTurn === 'player1' ? 'bg-gray-300 text-black' : 'bg-red-400 text-white'
@@ -37,26 +46,32 @@ const Board: React.FC = () => {
         {currentTurn === 'player1' ? "Player 1's Turn" : "Player 2's Turn"}
       </div>
 
-      {/* Player 2 captured pieces on top */}
-      <CapturedPieces capturedPieces={player2Captured} />
+      {/* Captured pieces for player 2 (top of board) */}
+      <CapturedPieces capturedPieces={humanPlayer === 'player1' ? player2Captured : player1Captured} />
 
+      {/* Chess board */}
       <div className="board" style={{ margin: '10px auto' }}>
-        {squares.map((_, index) => (
-          <Square
-            key={index}
-            index={index}
-            location={index}
-            id={squares[index].piece?.id || ''}
-            name={squares[index].piece?.name || ''}
-            color={squares[index].piece?.color || ''}
-            player={squares[index].piece?.player || null}
-            hasMoved={squares[index].piece?.hasMoved || false}
-          />
-        ))}
+        {renderSquares.map((sq, index) => {
+          // Correct square index for flipping
+          const actualIndex = humanPlayer === 'player1' ? index : 63 - index;
+
+          return (
+            <Square
+              key={actualIndex}
+              index={actualIndex}
+              location={actualIndex}
+              id={sq.piece?.id || ''}
+              name={sq.piece?.name || ''}
+              color={sq.piece?.color || ''}
+              player={sq.piece?.player || null}
+              hasMoved={sq.piece?.hasMoved || false}
+            />
+          );
+        })}
       </div>
 
-      {/* Player 1 captured pieces at bottom */}
-      <CapturedPieces capturedPieces={player1Captured} />
+      {/* Captured pieces for player 1 (bottom of board) */}
+      <CapturedPieces capturedPieces={humanPlayer === 'player1' ? player1Captured : player2Captured} />
     </div>
   );
 };

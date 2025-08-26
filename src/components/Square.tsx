@@ -14,7 +14,7 @@ type SquarePropsType = {
     const boardContext = useContext(BoardContext);
     if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
   
-    const { highlightedSquares, handleSquareClick, kingInCheckSquare } = boardContext;
+    const { highlightedSquares, handleSquareClick, kingInCheckSquare, lastMove } = boardContext;
     const theme = useContext(ThemeContext);
 
     const isKingInCheckHere = index === kingInCheckSquare;
@@ -22,25 +22,23 @@ type SquarePropsType = {
   
     //const square = squares[index];
     const isHighlighted = highlightedSquares.includes(index);
+
+    // Highlight last move squares
+    const isLastMove = lastMove && (lastMove.from === index || lastMove.to === index);
   
     const isLightSquare = (Math.floor(index / 8) + (index % 8)) % 2 === 0;
     const lightSquareColor = theme?.theme === 'dark' ? '#555' : '#eee';
     const darkSquareColor = theme?.theme === 'dark' ? '#333' : '#666';
   
-    /*
-    const backgroundColor = isHighlighted
-    ? 'yellow'
-    : isLightSquare
-    ? lightSquareColor
-    : darkSquareColor;
-  */
     let backgroundColor: string;
     const border = isHighlighted ? '2px solid black' : '1px solid transparent';
 
     if (isKingInCheckHere) {
-      backgroundColor = 'lightgreen'; // King in check highlight
+      backgroundColor = 'lightgreen'; // King in check highlight light green color
+    } else if (isLastMove) {
+      backgroundColor = '#f0e68c'; // subtle yellow for last move
     } else if (isHighlighted) {
-      backgroundColor = 'yellow';
+      backgroundColor = 'yellow'; // your current highlight (e.g., for possible moves)
     } else if (isLightSquare) {
       backgroundColor = lightSquareColor;
     } else {

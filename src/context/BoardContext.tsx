@@ -42,12 +42,15 @@ type BoardContextType = {
   handleSquareClick: (index: number) => void;
   handlePieceClick: (id: string, location: number, paths: number[]) => void;
   movePiece: (fromIndex: number, toIndex: number) => void;
+  lastMove: Move | null;
   kingInCheckSquare: number | null;
   enPassantSquare: number | null;
   setEnPassantSquare: (pos: number | null) => void;
   promotionPawn: { index: number; player: 'player1' | 'player2' } | null;
   setPromotionPawn: React.Dispatch<React.SetStateAction<{ index: number; player: 'player1' | 'player2' } | null>>;
   promotePawn: (pieceName: 'queen' | 'rook' | 'bishop' | 'knight') => void;
+  humanPlayer: 'player1' | 'player2' | null;
+  setHumanPlayer: React.Dispatch<React.SetStateAction<'player1' | 'player2' | null>>;
 };
 
 export const BoardContext = createContext<BoardContextType | undefined>(undefined);
@@ -58,7 +61,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
     id: uuidv4(),
     name,
-    color: player === 'player1' ? 'grey' : 'red',
+    color: player === 'player1' ? 'white' : 'brown',
     player,
     location,
   });
@@ -87,24 +90,22 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   initialSquares[60].piece = createPiece('king', 'player1', 60);
 
   const [squares, setSquares] = useState<SquareType[]>(initialSquares);
-  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
-  const [highlightedSquares, setHighlightedSquares] = useState<number[]>([]);
-  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>('player1');
 
-  const [capturedPieces, setCapturedPieces] = useState<PieceType[]>([]); // add at BoardContext top
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+
+  const [highlightedSquares, setHighlightedSquares] = useState<number[]>([]);
+
+  const [capturedPieces, setCapturedPieces] = useState<PieceType[]>([]);
 
   const [enPassantSquare, setEnPassantSquare] = useState<number | null>(null);
 
-  const [castlingRights, setCastlingRights] = useState<CastlingRights>({
-    K: true,
-    Q: true,
-    k: true,
-    q: true,
-  });
-
   const [lastMove, setLastMove] = useState<Move | null>(null);
 
-  
+  const [humanPlayer, setHumanPlayer] = useState<'player1' | 'player2' | null>(null);
+
+  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>(() =>
+    humanPlayer === 'player2' ? 'player1' : 'player1'
+  );
 
   const [promotionPawn, setPromotionPawn] = useState<{
     index: number;
@@ -115,9 +116,18 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     stockfish.init(); // run handshake once
   }, []);
+
+  useEffect(() => {
+    if (!humanPlayer) return;
+    // if human picks player2, AI should start as player1
+    setCurrentTurn(humanPlayer === 'player2' ? 'player1' : 'player1');
+  }, [humanPlayer]);
   
   useEffect(() => {
-    if (currentTurn !== "player2") return; // only AI's turn
+    if (!humanPlayer) return; // only AI's turn
+    const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
+  
+    if (currentTurn !== aiPlayer) return; // only run when it’s AI’s turn
   
     const fen = Engine.squaresToFEN(
       squares,
@@ -144,7 +154,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Move piece and handle promotion in one step
       movePiece(fromIndex, toIndex, undefined, promotionPiece);
     });
-  }, [currentTurn]);
+  }, [currentTurn, humanPlayer]);
   
   function castlingRightsToString(c: CastlingRights): string {
     const s = (c.K ? "K" : "") + (c.Q ? "Q" : "") + (c.k ? "k" : "") + (c.q ? "q" : "");
@@ -315,6 +325,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
 
   const handleSquareClick = (toIndex: number) => {
+    if (currentTurn !== humanPlayer) return; // ignore clicks if not human's turn
     const clickedSquare = squares[toIndex];
     const clickedPiece = clickedSquare.piece;
   
@@ -399,6 +410,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         currentTurn,
         handleSquareClick,
         movePiece,
+        lastMove,
         handlePieceClick,
         kingInCheckSquare,
         capturedPieces,
@@ -407,6 +419,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         promotionPawn,
         setPromotionPawn,
         promotePawn,
+        humanPlayer,
+        setHumanPlayer
       }}
     >
       {children}

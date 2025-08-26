@@ -42,19 +42,24 @@ export class StockfishEngine {
     setPosition(fen: string) {
       this.sendCommand(`position fen ${fen}`);
     }
-  
-    async getBestMove(fen: string, depth = 15): Promise<string> {
+    // high depth can cause out-of-bounds memory allocation *********************
+    async getBestMove(fen: string, movetime = 1000): Promise<string> {
       return new Promise((resolve) => {
         const unsubscribe = this.onMessage((msg) => {
           if (msg.startsWith("bestmove")) {
             const [, best] = msg.split(" ");
             unsubscribe();
+            clearTimeout(timeoutId);
             resolve(best);
           }
         });
-  
         this.setPosition(fen);
-        this.sendCommand(`go depth ${depth}`);
+        this.sendCommand(`go movetime ${movetime}`);
+        //alternatively can use this.sendCommand(`go depth ${15}`); for fixed depth calculation
+        // Force stop if it takes too long
+        const timeoutId = setTimeout(() => {
+          this.sendCommand("stop");
+        }, movetime + 50); // small buffer after movetime
       });
     }
   

@@ -13,7 +13,7 @@ export type PieceRefType = {
   getName: () => string;
   getLegitimatePaths: () => number[];
 };
-const pieceSymbols: Record<string, string> = {
+const pieceSymbolsBlack: Record<string, string> = {
   pawn: '♟',     // player1
   rook: '♜',
   knight: '♞',
@@ -82,7 +82,7 @@ const Piece: React.FC<PiecePropsType> = (props) => {
   // ----- STYLES -----
   const styles: React.CSSProperties = {
     backgroundColor: props.color,
-    color: theme?.theme === 'dark' ? 'white' : 'black',
+    color: theme?.theme === 'dark' ? 'orange' : 'black',
     width: '100%',
     height: '100%',
     fontWeight: 'bold',
@@ -101,8 +101,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     <div className="card">
       <button onClick={handleClick} style={styles}>
         {props.player === 'player1' 
-          ? pieceSymbols[props.name] 
-          : pieceSymbolsWhite[props.name]}
+          ? pieceSymbolsWhite[props.name] 
+          : pieceSymbolsBlack[props.name]}
       </button>
     </div>
   );

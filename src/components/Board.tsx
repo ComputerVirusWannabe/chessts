@@ -10,7 +10,7 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, createInitialSquares } = boardContext;
   const themeContext = useContext(ThemeContext);
 
   // Show StartGame if player hasn't chosen a side yet
@@ -69,15 +69,12 @@ const Board: React.FC = () => {
 
       <button
         onClick={() => {
-          boardContext.setGameMode(null);          // hide the board, show StartGame
-          boardContext.setHumanPlayer(null);       // reset human player
-          boardContext.setCapturedPieces([]);      // clear captured pieces
-          boardContext.setSquares(boardContext.squares.map(sq => ({ piece: null }))); // reset board
-
-          // Recreate initial setup if you want pieces back
-          const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
-          // …populate initialSquares with pieces exactly like in BoardProvider
-          boardContext.setSquares(initialSquares);
+          boardContext.setSquares(boardContext.createInitialSquares());
+          boardContext.setCapturedPieces([]);
+          boardContext.setHumanPlayer(null);
+          boardContext.setGameMode(null);
+          boardContext.setLastMove(null);
+          boardContext.setHighlightedSquares([]);
         }}
       >
         Back to Start

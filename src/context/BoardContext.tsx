@@ -5,6 +5,7 @@ import PromotionDialog from '../components/PromotionDialog';
 import { v4 as uuidv4 } from 'uuid';
 import { useEffect } from 'react';
 import { StockfishEngine } from '../ai/StockfishEngine';
+
 export type PieceType = {
   id: string;
   name: string; // 'pawn', 'rook', etc.
@@ -40,6 +41,7 @@ type BoardContextType = {
   setSquares: React.Dispatch<React.SetStateAction<SquareType[]>>;
   selectedPieceId: string | null;
   highlightedSquares: number[];
+  setHighlightedSquares: React.Dispatch<React.SetStateAction<number[]>>;
   currentTurn: 'player1' | 'player2';
   capturedPieces: PieceType[]; 
   setCapturedPieces: React.Dispatch<React.SetStateAction<PieceType[]>>;
@@ -47,6 +49,7 @@ type BoardContextType = {
   handlePieceClick: (id: string, location: number, paths: number[]) => void;
   movePiece: (fromIndex: number, toIndex: number) => void;
   lastMove: Move | null;
+  setLastMove: React.Dispatch<React.SetStateAction<Move | null>>;
   kingInCheckSquare: number | null;
   enPassantSquare: number | null;
   setEnPassantSquare: (pos: number | null) => void;
@@ -57,45 +60,52 @@ type BoardContextType = {
   setHumanPlayer: React.Dispatch<React.SetStateAction<'player1' | 'player2' | null>>;
   setGameMode: React.Dispatch<React.SetStateAction<GameMode>>;
   gameMode: GameMode;
+  createInitialSquares: () => SquareType[];
 };
 
 export const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
-
-  const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
-    id: uuidv4(),
-    name,
-    color: player === 'player1' ? 'white' : 'brown',
-    player,
-    location,
-  });
 
   const [kingInCheckSquare, setKingInCheckSquare] = useState<number | null>(null);
 
-  // Setup pieces
-  for (let i = 0; i < 8; i++) initialSquares[8 + i].piece = createPiece('pawn', 'player2', 8 + i);
-  initialSquares[0].piece = createPiece('rook', 'player2', 0);
-  initialSquares[7].piece = createPiece('rook', 'player2', 7);
-  initialSquares[1].piece = createPiece('knight', 'player2', 1);
-  initialSquares[6].piece = createPiece('knight', 'player2', 6);
-  initialSquares[2].piece = createPiece('bishop', 'player2', 2);
-  initialSquares[5].piece = createPiece('bishop', 'player2', 5);
-  initialSquares[3].piece = createPiece('queen', 'player2', 3);
-  initialSquares[4].piece = createPiece('king', 'player2', 4);
+  const createInitialSquares = (): SquareType[] => {
+    const squares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
+  
+    const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
+      id: uuidv4(),
+      name,
+      color: player === 'player1' ? 'white' : 'brown',
+      player,
+      location,
+    });
+  
+    // Player2 pieces (top)
+    for (let i = 0; i < 8; i++) squares[8 + i].piece = createPiece('pawn', 'player2', 8 + i);
+    squares[0].piece = createPiece('rook', 'player2', 0);
+    squares[7].piece = createPiece('rook', 'player2', 7);
+    squares[1].piece = createPiece('knight', 'player2', 1);
+    squares[6].piece = createPiece('knight', 'player2', 6);
+    squares[2].piece = createPiece('bishop', 'player2', 2);
+    squares[5].piece = createPiece('bishop', 'player2', 5);
+    squares[3].piece = createPiece('queen', 'player2', 3);
+    squares[4].piece = createPiece('king', 'player2', 4);
+  
+    // Player1 pieces (bottom)
+    for (let i = 0; i < 8; i++) squares[48 + i].piece = createPiece('pawn', 'player1', 48 + i);
+    squares[56].piece = createPiece('rook', 'player1', 56);
+    squares[63].piece = createPiece('rook', 'player1', 63);
+    squares[57].piece = createPiece('knight', 'player1', 57);
+    squares[62].piece = createPiece('knight', 'player1', 62);
+    squares[58].piece = createPiece('bishop', 'player1', 58);
+    squares[61].piece = createPiece('bishop', 'player1', 61);
+    squares[59].piece = createPiece('queen', 'player1', 59);
+    squares[60].piece = createPiece('king', 'player1', 60);
+  
+    return squares;
+  };
 
-  for (let i = 0; i < 8; i++) initialSquares[48 + i].piece = createPiece('pawn', 'player1', 48 + i);
-  initialSquares[56].piece = createPiece('rook', 'player1', 56);
-  initialSquares[63].piece = createPiece('rook', 'player1', 63);
-  initialSquares[57].piece = createPiece('knight', 'player1', 57);
-  initialSquares[62].piece = createPiece('knight', 'player1', 62);
-  initialSquares[58].piece = createPiece('bishop', 'player1', 58);
-  initialSquares[61].piece = createPiece('bishop', 'player1', 61);
-  initialSquares[59].piece = createPiece('queen', 'player1', 59);
-  initialSquares[60].piece = createPiece('king', 'player1', 60);
-
-  const [squares, setSquares] = useState<SquareType[]>(initialSquares);
+  const [squares, setSquares] = useState<SquareType[]>(createInitialSquares());
 
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
 
@@ -226,6 +236,10 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
   
   const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number, promotionPiece?: "queen" | "rook" | "bishop" | "knight") => {
+    if (!squares[fromIndex]?.piece) {
+      console.warn('Attempted to move from an empty or undefined square', fromIndex);
+      return;
+    }
     const movingPiece = { ...squares[fromIndex].piece!, location: toIndex, hasMoved: true };
     const targetPiece = squares[toIndex].piece;
   
@@ -407,7 +421,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setSelectedPieceId(id);
     setHighlightedSquares(paths);
   };
-
+  
   return (
     <BoardContext.Provider
       value={{
@@ -415,10 +429,12 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setSquares,
         selectedPieceId,
         highlightedSquares,
+        setHighlightedSquares,
         currentTurn,
         handleSquareClick,
         movePiece,
         lastMove,
+        setLastMove,
         handlePieceClick,
         kingInCheckSquare,
         capturedPieces,
@@ -431,7 +447,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         humanPlayer,
         setHumanPlayer,
         setGameMode,
-        gameMode
+        gameMode,
+        createInitialSquares,
       }}
     >
       {children}

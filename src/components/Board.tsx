@@ -1,9 +1,9 @@
 import React, { useContext } from 'react';
 import Square from './Square';
 import StartGame from './StartGame';
-import { BoardContext } from '../context/BoardContext';
+import { BoardContext, type SquareType } from '../context/BoardContext';
 import { ThemeContext } from '../context/ThemeContext';
-import CapturedPieces, { type CapturedPiece } from './CapturedPieces';
+import CapturedPieces from './CapturedPieces';
 import '../styles/Board.css';
 
 const Board: React.FC = () => {
@@ -22,18 +22,43 @@ const Board: React.FC = () => {
     }
   };
 
-  // Separate captured pieces for top/bottom
-  const player1Captured: CapturedPiece[] = capturedPieces.filter(p => p.player === 'player1'); // pieces lost by player1
-  const player2Captured: CapturedPiece[] = capturedPieces.filter(p => p.player === 'player2'); // pieces lost by player2
+  // Separate captured pieces for each player
+  const player1Captured = capturedPieces.filter(p => p.player === 'player1');
+  const player2Captured = capturedPieces.filter(p => p.player === 'player2');
 
-  // Flip board if human is player2
-  //const renderSquares = humanPlayer === 'player1' ? squares : [...squares].reverse();
-  const renderSquares =
-  gameMode === 'human-vs-ai'
-    ? humanPlayer === 'player1'
-      ? squares
-      : [...squares].reverse()
-    : squares;
+  // Determine orientation + index mapping
+  let renderSquares = squares;
+  let actualIndexFor = (i: number) => i;
+
+  if (gameMode === 'human-vs-ai') {
+    if (humanPlayer === 'player1') {
+      renderSquares = squares;
+      actualIndexFor = i => i;
+    } else {
+      renderSquares = [...squares].reverse();
+      actualIndexFor = i => 63 - i;
+    }
+  } else {
+    // human-vs-human: board is never flipped
+    renderSquares = squares;
+    actualIndexFor = i => i;
+  }
+
+  // Captured rows
+  let topCaptured, bottomCaptured;
+
+  if (gameMode === 'human-vs-human') {
+    topCaptured = player2Captured;   // black pieces on top
+    bottomCaptured = player1Captured; // white pieces bottom
+  } else {
+    if (humanPlayer === 'player1') {
+      topCaptured = player2Captured;
+      bottomCaptured = player1Captured;
+    } else {
+      topCaptured = player1Captured;
+      bottomCaptured = player2Captured;
+    }
+  }
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -41,6 +66,23 @@ const Board: React.FC = () => {
       <button onClick={toggleTheme} style={{ marginBottom: '10px' }}>
         Toggle Theme
       </button>
+
+      <button
+        onClick={() => {
+          boardContext.setGameMode(null);          // hide the board, show StartGame
+          boardContext.setHumanPlayer(null);       // reset human player
+          boardContext.setCapturedPieces([]);      // clear captured pieces
+          boardContext.setSquares(boardContext.squares.map(sq => ({ piece: null }))); // reset board
+
+          // Recreate initial setup if you want pieces back
+          const initialSquares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
+          // …populate initialSquares with pieces exactly like in BoardProvider
+          boardContext.setSquares(initialSquares);
+        }}
+      >
+        Back to Start
+      </button>
+
 
       {/* Current turn display */}
       <div
@@ -52,20 +94,13 @@ const Board: React.FC = () => {
         {currentTurn === 'player1' ? "Player 1's Turn" : "Player 2's Turn"}
       </div>
 
-      {/* Captured pieces for player 2 (top of board) */}
-      <CapturedPieces capturedPieces={humanPlayer === 'player1' ? player2Captured : player1Captured} />
+      {/* Captured pieces (top) */}
+      <CapturedPieces capturedPieces={topCaptured} />
 
       {/* Chess board */}
       <div className="board" style={{ margin: '10px auto' }}>
         {renderSquares.map((sq, index) => {
-          // Correct square index for flipping
-          //const actualIndex = humanPlayer === 'player1' ? index : 63 - index;
-          const actualIndex =
-          gameMode === 'human-vs-ai'
-            ? (humanPlayer === 'player1' ? index : 63 - index)
-            : index;
-
-
+          const actualIndex = actualIndexFor(index);
           return (
             <Square
               key={actualIndex}
@@ -81,8 +116,8 @@ const Board: React.FC = () => {
         })}
       </div>
 
-      {/* Captured pieces for player 1 (bottom of board) */}
-      <CapturedPieces capturedPieces={humanPlayer === 'player1' ? player1Captured : player2Captured} />
+      {/* Captured pieces (bottom) */}
+      <CapturedPieces capturedPieces={bottomCaptured} />
     </div>
   );
 };

@@ -37,10 +37,12 @@ export type SquareType = {
 
 type BoardContextType = {
   squares: SquareType[];
+  setSquares: React.Dispatch<React.SetStateAction<SquareType[]>>;
   selectedPieceId: string | null;
   highlightedSquares: number[];
   currentTurn: 'player1' | 'player2';
   capturedPieces: PieceType[]; 
+  setCapturedPieces: React.Dispatch<React.SetStateAction<PieceType[]>>;
   handleSquareClick: (index: number) => void;
   handlePieceClick: (id: string, location: number, paths: number[]) => void;
   movePiece: (fromIndex: number, toIndex: number) => void;
@@ -410,6 +412,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <BoardContext.Provider
       value={{
         squares,
+        setSquares,
         selectedPieceId,
         highlightedSquares,
         currentTurn,
@@ -419,6 +422,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         handlePieceClick,
         kingInCheckSquare,
         capturedPieces,
+        setCapturedPieces,
         enPassantSquare,
         setEnPassantSquare,
         promotionPawn,

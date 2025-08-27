@@ -160,42 +160,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
       movePiece(fromIndex, toIndex, undefined, promotionPiece);
     });
-  }, [currentTurn, humanPlayer, gameMode, squares, lastMove]);useEffect(() => {
-    if (!humanPlayer) return;
-    if (gameMode !== 'human-vs-ai') return; // only run AI in human-vs-ai mode
-  
-    const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
-    if (currentTurn !== aiPlayer) return; // only run when it’s AI’s turn
-  
-    const fen = Engine.squaresToFEN(
-      squares,
-      currentTurn,
-      lastMove as Move | undefined,
-      0,
-      1
-    );
-  
-    stockfish.getBestMove(fen, 10).then((bestMove) => {
-      const fromIndex = Engine.squareNameToIndex(bestMove.slice(0, 2));
-      const toIndex = Engine.squareNameToIndex(bestMove.slice(2, 4));
-  
-      let promotionPiece: "queen" | "rook" | "bishop" | "knight" | undefined;
-      if (bestMove.length === 5) {
-        promotionPiece =
-          bestMove[4] === "q" ? "queen" :
-          bestMove[4] === "r" ? "rook" :
-          bestMove[4] === "b" ? "bishop" :
-          "knight";
-      }
-  
-      // Add delay before moving
-      const delayMs = 500; // half a second, adjust to feel natural
-      setTimeout(() => {
-        movePiece(fromIndex, toIndex, undefined, promotionPiece);
-      }, delayMs);
-    });
   }, [currentTurn, humanPlayer, gameMode, squares, lastMove]);
-  
   
   
   function castlingRightsToString(c: CastlingRights): string {

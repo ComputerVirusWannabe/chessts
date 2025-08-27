@@ -45,12 +45,15 @@ export class StockfishEngine {
     // high depth can cause out-of-bounds memory allocation *********************
     async getBestMove(fen: string, movetime = 1000): Promise<string> {
       return new Promise((resolve) => {
+        const delayMs = 1000; // Define delayMs with a default value
         const unsubscribe = this.onMessage((msg) => {
           if (msg.startsWith("bestmove")) {
             const [, best] = msg.split(" ");
             unsubscribe();
             clearTimeout(timeoutId);
-            resolve(best);
+            setTimeout(() => {
+              resolve(best);
+            }, delayMs);
           }
         });
         this.setPosition(fen);

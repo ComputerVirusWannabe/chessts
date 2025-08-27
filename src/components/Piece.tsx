@@ -14,7 +14,7 @@ export type PieceRefType = {
   getLegitimatePaths: () => number[];
 };
 const pieceSymbolsBlack: Record<string, string> = {
-  pawn: '♟',     // player1
+  pawn: '♟',     // player2
   rook: '♜',
   knight: '♞',
   bishop: '♝',
@@ -23,7 +23,7 @@ const pieceSymbolsBlack: Record<string, string> = {
 };
 
 const pieceSymbolsWhite: Record<string, string> = {
-  pawn: '♙',     // player2
+  pawn: '♙',     // player1
   rook: '♖',
   knight: '♘',
   bishop: '♗',

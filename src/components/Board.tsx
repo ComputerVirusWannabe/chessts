@@ -10,11 +10,11 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode } = boardContext;
   const themeContext = useContext(ThemeContext);
 
   // Show StartGame if player hasn't chosen a side yet
-  if (!humanPlayer) return <StartGame />;
+  if (!gameMode) return <StartGame />;
 
   const toggleTheme = () => {
     if (themeContext) {
@@ -27,7 +27,13 @@ const Board: React.FC = () => {
   const player2Captured: CapturedPiece[] = capturedPieces.filter(p => p.player === 'player2'); // pieces lost by player2
 
   // Flip board if human is player2
-  const renderSquares = humanPlayer === 'player1' ? squares : [...squares].reverse();
+  //const renderSquares = humanPlayer === 'player1' ? squares : [...squares].reverse();
+  const renderSquares =
+  gameMode === 'human-vs-ai'
+    ? humanPlayer === 'player1'
+      ? squares
+      : [...squares].reverse()
+    : squares;
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -53,7 +59,12 @@ const Board: React.FC = () => {
       <div className="board" style={{ margin: '10px auto' }}>
         {renderSquares.map((sq, index) => {
           // Correct square index for flipping
-          const actualIndex = humanPlayer === 'player1' ? index : 63 - index;
+          //const actualIndex = humanPlayer === 'player1' ? index : 63 - index;
+          const actualIndex =
+          gameMode === 'human-vs-ai'
+            ? (humanPlayer === 'player1' ? index : 63 - index)
+            : index;
+
 
           return (
             <Square

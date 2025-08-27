@@ -14,6 +14,8 @@ export type PieceType = {
   hasMoved?: boolean;
 };
 
+type GameMode = 'human-vs-human' | 'human-vs-ai' | null;
+
 type Move = {
   from: number;
   to: number;
@@ -51,6 +53,8 @@ type BoardContextType = {
   promotePawn: (pieceName: 'queen' | 'rook' | 'bishop' | 'knight') => void;
   humanPlayer: 'player1' | 'player2' | null;
   setHumanPlayer: React.Dispatch<React.SetStateAction<'player1' | 'player2' | null>>;
+  setGameMode: React.Dispatch<React.SetStateAction<GameMode>>;
+  gameMode: GameMode;
 };
 
 export const BoardContext = createContext<BoardContextType | undefined>(undefined);
@@ -103,9 +107,9 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const [humanPlayer, setHumanPlayer] = useState<'player1' | 'player2' | null>(null);
 
-  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>(() =>
-    humanPlayer === 'player2' ? 'player1' : 'player1'
-  );
+  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>('player1');
+
+  const [gameMode, setGameMode] = useState<GameMode>(null);
 
   const [promotionPawn, setPromotionPawn] = useState<{
     index: number;
@@ -124,9 +128,11 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [humanPlayer]);
   
   useEffect(() => {
-    if (!humanPlayer) return; // only AI's turn
-    const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
+    if (!humanPlayer) return;
+    if (gameMode !== 'human-vs-ai') return; // <-- only run AI in human-vs-ai mode
   
+    // Determine AI player
+    const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
     if (currentTurn !== aiPlayer) return; // only run when it’s AI’s turn
   
     const fen = Engine.squaresToFEN(
@@ -141,7 +147,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const fromIndex = Engine.squareNameToIndex(bestMove.slice(0, 2));
       const toIndex = Engine.squareNameToIndex(bestMove.slice(2, 4));
   
-      // Determine if this is a promotion move
       let promotionPiece: "queen" | "rook" | "bishop" | "knight" | undefined;
       if (bestMove.length === 5) {
         promotionPiece =
@@ -151,10 +156,10 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           "knight";
       }
   
-      // Move piece and handle promotion in one step
       movePiece(fromIndex, toIndex, undefined, promotionPiece);
     });
-  }, [currentTurn, humanPlayer]);
+  }, [currentTurn, humanPlayer, gameMode, squares, lastMove]);
+  
   
   function castlingRightsToString(c: CastlingRights): string {
     const s = (c.K ? "K" : "") + (c.Q ? "Q" : "") + (c.k ? "k" : "") + (c.q ? "q" : "");
@@ -325,7 +330,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
 
   const handleSquareClick = (toIndex: number) => {
-    if (currentTurn !== humanPlayer) return; // ignore clicks if not human's turn
+    if (gameMode === 'human-vs-ai' && currentTurn !== humanPlayer) return; // block AI turn
     const clickedSquare = squares[toIndex];
     const clickedPiece = clickedSquare.piece;
   
@@ -420,7 +425,9 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setPromotionPawn,
         promotePawn,
         humanPlayer,
-        setHumanPlayer
+        setHumanPlayer,
+        setGameMode,
+        gameMode
       }}
     >
       {children}

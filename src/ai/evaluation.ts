@@ -1,0 +1,61 @@
+import { type SquareType, type PieceType } from '../context/BoardContext';
+import { type Player } from './engine';
+import { countMoves } from './engine';
+
+const PIECE_VALUE: Record<PieceType['name'], number> = {
+  pawn: 100,
+  knight: 320,
+  bishop: 330,
+  rook: 500,
+  queen: 900,
+  king: 20000,
+};
+
+const PAWN_TABLE = [
+   0, 0, 0, 0, 0, 0, 0, 0,
+  50,50,50,50,50,50,50,50,
+  10,10,20,30,30,20,10,10,
+   5, 5,10,25,25,10, 5, 5,
+   0, 0, 0,20,20, 0, 0, 0,
+   5,-5,-10,0,0,-10,-5, 5,
+   5,10,10,-20,-20,10,10, 5,
+   0, 0, 0, 0, 0, 0, 0, 0
+];
+
+function mirror(square: number): number {
+  const row = Math.floor(square / 8);
+  const col = square % 8;
+  return (7 - row) * 8 + col;
+}
+
+function pieceSquareBonus(piece: PieceType, square: number): number {
+  let idx = piece.player === 'player2' ? mirror(square) : square;
+
+  switch (piece.name) {
+    case 'pawn': return PAWN_TABLE[idx];
+    default: return 0;
+  }
+}
+
+export function evaluate(board: SquareType[], forPlayer: Player): number {
+  let score = 0;
+
+  for (let i = 0; i < 64; i++) {
+    const p = board[i].piece;
+    if (!p) continue;
+
+    const val = PIECE_VALUE[p.name];
+
+    score += p.player === forPlayer ? val : -val;
+    score += pieceSquareBonus(p, i);
+  }
+
+  // small mobility bonus
+  const mobility =
+    countMoves(board, forPlayer) -
+    countMoves(board, forPlayer === 'player1' ? 'player2' : 'player1');
+
+  score += 5 * mobility;
+
+  return score;
+}

@@ -92,8 +92,8 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 0,              // <-- prevent button from overflowing
-    boxSizing: 'border-box', // <-- keeps it inside parent
+    padding: 0,              // prevent button from overflowing
+    boxSizing: 'border-box', // keeps it inside parent
   };
   
 

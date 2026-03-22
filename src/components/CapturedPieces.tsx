@@ -35,7 +35,7 @@ const CapturedPieces: React.FC<CapturedPiecesProps> = ({ capturedPieces }) => {
             justifyContent: 'center',
             alignItems: 'center',
             borderRadius: '4px',
-            color: 'white',
+            color: 'GreenYellow',
             fontWeight: 'bold',
             fontSize: '18px',
           }}

@@ -1,7 +1,7 @@
 export class StockfishEngine {
     engine: Worker;
     private listeners: ((msg: string) => void)[] = [];
-  
+    private isThinking = false;
     constructor() {
       // Use the public folder copy
       this.engine = new Worker("/stockfish-17.1-lite-single-03e3232.js");
@@ -42,32 +42,46 @@ export class StockfishEngine {
     setPosition(fen: string) {
       this.sendCommand(`position fen ${fen}`);
     }
+    
     // high depth can cause out-of-bounds memory allocation *********************
     async getBestMove(fen: string, movetime = 1000): Promise<string> {
+      if (this.isThinking) {
+        this.sendCommand("stop");
+      }
+    
+      this.isThinking = true;
+    
       return new Promise((resolve) => {
-        const delayMs = 1000; // Define delayMs with a default value
+        let resolved = false;
+    
         const unsubscribe = this.onMessage((msg) => {
-          if (msg.startsWith("bestmove")) {
+          if (msg.startsWith("bestmove") && !resolved) {
+            resolved = true;
             const [, best] = msg.split(" ");
             unsubscribe();
             clearTimeout(timeoutId);
-            setTimeout(() => {
-              resolve(best);
-            }, delayMs);
+            clearTimeout(hardTimeout);
+            this.isThinking = false;
+            resolve(best);
           }
         });
+    
         this.setPosition(fen);
         this.sendCommand(`go movetime ${movetime}`);
-        //alternatively can use this.sendCommand(`go depth ${15}`); for fixed depth calculation
-        // Force stop if it takes too long
+    
         const timeoutId = setTimeout(() => {
           this.sendCommand("stop");
-        }, movetime + 50); // small buffer after movetime
+          this.isThinking = false;
+        }, movetime + 50);
+    
+        const hardTimeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            unsubscribe();
+            this.isThinking = false;
+            resolve("resign"); // fallback
+          }
+        }, movetime + 2000);
       });
     }
-  
-    terminate() {
-      this.engine.terminate();
-    }
   }
-  

@@ -6,6 +6,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import CapturedPieces from './CapturedPieces';
 import '../styles/Board.css';
 
+
 const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');

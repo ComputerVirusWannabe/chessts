@@ -4,8 +4,10 @@ Currently, the main AI algorithm is incomplete, and Stockfish is being used. Wil
 
 
 How to play:
-- Clone the code, install npm with "npm install"
-- then do npm run dev. You can now run the game on localhost 5173
+The game is hosted on Vercel, so you can just follow the link below:
+
+https://vpchess-an66ypd0g-computerviruswannabes-projects.vercel.app/
+
 - Choose to play either against AI or another person. Enjoy!
 
   Known bugs:

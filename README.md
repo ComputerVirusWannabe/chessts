@@ -7,6 +7,7 @@ How to play:
 The game is hosted on Vercel, so you can just follow the link below:
 
 https://vpchess-an66ypd0g-computerviruswannabes-projects.vercel.app/
+https://vpchessts.vercel.app/
 
 - Choose to play either against AI or another person. Enjoy!
 

@@ -7,14 +7,15 @@ type TTEntry = {
   score: number;
 };
 
-const TT = new Map<number, TTEntry>();
-
 export function chooseBestMove(
   board: SquareType[],
   player: Player,
   depth = 3
 ): Move | null {
-  const { best } = minimax(board, depth, -Infinity, Infinity, player);
+  // TT is created locally so it is garbage-collected after each search,
+  // preventing unbounded memory growth over a long game.
+  const TT = new Map<number, TTEntry>();
+  const { best } = minimax(board, depth, -Infinity, Infinity, player, TT);
   return best ?? null;
 }
 
@@ -23,7 +24,8 @@ function minimax(
   depth: number,
   alpha: number,
   beta: number,
-  player: Player
+  player: Player,
+  TT: Map<number, TTEntry>
 ): { score: number; best?: Move } {
   const key = hashBoard(board, player);
   const tt = TT.get(key);
@@ -49,7 +51,8 @@ function minimax(
       depth - 1,
       -beta,
       -alpha,
-      player === 'player1' ? 'player2' : 'player1'
+      player === 'player1' ? 'player2' : 'player1',
+      TT
     );
 
     const score = -result.score;

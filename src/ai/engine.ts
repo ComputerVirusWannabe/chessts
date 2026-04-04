@@ -1,6 +1,7 @@
 import { type SquareType, type PieceType } from '../context/BoardContext';
 import { generatePseudoLegalMoves } from '../engine/moveGenerators';
 import * as Engine from '../engine/logic';
+import { calculateCastlingMoves } from '../engine/logic';
 
 // Types
 export type Player = 'player1' | 'player2';
@@ -31,6 +32,11 @@ export function getAllLegalMoves(
     if (!piece || piece.player !== player) continue;
 
     const pseudo = generatePseudoLegalMoves(piece, i, board, enPassantSquare ?? undefined);
+
+    if (piece.name === 'king' && !piece.hasMoved) {
+      pseudo.push(...calculateCastlingMoves(piece, board));
+    }
+
     const legal = Engine.filterLegalMoves(piece, i, pseudo, board);
 
     for (const to of legal) {
@@ -74,6 +80,26 @@ export function applyMove(board: SquareType[], mv: Move): SquareType[] {
 
   if (mv.isPromotion) {
     next[mv.to].piece!.name = mv.promote ?? 'queen';
+  }
+
+  // Handle castling: move the rook along with the king
+  if (moving.name === 'king' && Math.abs(mv.to - mv.from) === 2) {
+    const row = Math.floor(mv.from / 8);
+    if (mv.to > mv.from) { // kingside
+      const rookFrom = row * 8 + 7;
+      const rookTo = row * 8 + 5;
+      if (next[rookFrom].piece) {
+        next[rookTo].piece = { ...next[rookFrom].piece!, location: rookTo, hasMoved: true };
+        next[rookFrom].piece = null;
+      }
+    } else { // queenside
+      const rookFrom = row * 8 + 0;
+      const rookTo = row * 8 + 3;
+      if (next[rookFrom].piece) {
+        next[rookTo].piece = { ...next[rookFrom].piece!, location: rookTo, hasMoved: true };
+        next[rookFrom].piece = null;
+      }
+    }
   }
 
   return next;

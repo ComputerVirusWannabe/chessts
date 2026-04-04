@@ -1,3 +1,5 @@
+/*
+
 export class StockfishEngine {
     engine: Worker;
     private listeners: ((msg: string) => void)[] = [];
@@ -85,3 +87,4 @@ export class StockfishEngine {
       });
     }
   }
+  */

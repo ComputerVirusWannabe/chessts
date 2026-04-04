@@ -4,7 +4,7 @@ import * as Engine from '../engine/logic';
 import PromotionDialog from '../components/PromotionDialog';
 import { v4 as uuidv4 } from 'uuid';
 import { useEffect } from 'react';
-import { StockfishEngine } from '../ai/StockfishEngine';
+import { chooseBestMove } from '../ai/search';
 
 export type PieceType = {
   id: string;
@@ -128,11 +128,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     player: 'player1' | 'player2';
   } | null>(null);
 
-  const stockfish = new StockfishEngine();
-  useEffect(() => {
-    stockfish.init(); // run handshake once
-  }, []);
-
   useEffect(() => {
     if (!humanPlayer) return;
     // if human picks player2, AI should start as player1
@@ -142,34 +137,25 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     if (!humanPlayer) return;
     if (gameMode !== 'human-vs-ai') return; // <-- only run AI in human-vs-ai mode
-  
+
     // Determine AI player
     const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
-    if (currentTurn !== aiPlayer) return; // only run when it’s AI’s turn
-  
-    const fen = Engine.squaresToFEN(
-      squares,
-      currentTurn,
-      lastMove as Move | undefined,
-      0,
-      1
-    );
-  
-    stockfish.getBestMove(fen, 10).then((bestMove) => {
-      const fromIndex = Engine.squareNameToIndex(bestMove.slice(0, 2));
-      const toIndex = Engine.squareNameToIndex(bestMove.slice(2, 4));
-  
+    if (currentTurn !== aiPlayer) return; // only run when it's AI's turn
+
+    // Run search in a timeout so React can render the board update first
+    const timerId = setTimeout(() => {
+      const move = chooseBestMove(squares, aiPlayer, 3);
+      if (!move) return;
+
       let promotionPiece: "queen" | "rook" | "bishop" | "knight" | undefined;
-      if (bestMove.length === 5) {
-        promotionPiece =
-          bestMove[4] === "q" ? "queen" :
-          bestMove[4] === "r" ? "rook" :
-          bestMove[4] === "b" ? "bishop" :
-          "knight";
+      if (move.isPromotion) {
+        promotionPiece = move.promote ?? 'queen';
       }
-  
-      movePiece(fromIndex, toIndex, undefined, promotionPiece);
-    });
+
+      movePiece(move.from, move.to, undefined, promotionPiece);
+    }, 0);
+
+    return () => clearTimeout(timerId);
   }, [currentTurn, humanPlayer, gameMode, squares, lastMove]);
   
   

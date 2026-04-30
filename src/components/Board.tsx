@@ -115,7 +115,9 @@ const Board: React.FC = () => {
       </div>
 
       {/* Captured pieces (bottom) */}
-      <CapturedPieces capturedPieces={bottomCaptured} />
+      <div style={{ marginTop: '10px' }}>
+        <CapturedPieces capturedPieces={bottomCaptured} />
+      </div>
     </div>
   );
 };

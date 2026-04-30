@@ -40,6 +40,11 @@ function minimax(
 
   const moves = getAllLegalMoves(board, player);
 
+  if (moves.length === 0) {
+    TT.set(key, { depth, score: -Infinity });
+    return { score: -Infinity };
+  }
+
   let bestMove: Move | undefined = moves[0];
   let bestScore = -Infinity;
 

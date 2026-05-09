@@ -13,7 +13,7 @@ export type PieceRefType = {
   getName: () => string;
   getLegitimatePaths: () => number[];
 };
-const pieceSymbolsBlack: Record<string, string> = {
+export const pieceSymbolsBlack: Record<string, string> = {
   pawn: '♟',     // player2
   rook: '♜',
   knight: '♞',
@@ -22,7 +22,7 @@ const pieceSymbolsBlack: Record<string, string> = {
   king: '♚'
 };
 
-const pieceSymbolsWhite: Record<string, string> = {
+export const pieceSymbolsWhite: Record<string, string> = {
   pawn: '♙',     // player1
   rook: '♖',
   knight: '♘',

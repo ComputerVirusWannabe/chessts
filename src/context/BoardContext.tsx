@@ -239,7 +239,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     newSquares[fromIndex].piece = null;
   
     // --- Normal capture ---
-    let updatedCapturedPieces = [...capturedPieces];
+    const updatedCapturedPieces = [...capturedPieces];
     if (targetPiece) {
       updatedCapturedPieces.push({ ...targetPiece, id: uuidv4(), capturedBy: movingPiece.player as 'player1' | 'player2' });
     }

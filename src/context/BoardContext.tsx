@@ -43,6 +43,7 @@ type BoardContextType = {
   highlightedSquares: number[];
   setHighlightedSquares: React.Dispatch<React.SetStateAction<number[]>>;
   currentTurn: 'player1' | 'player2';
+  setCurrentTurn: React.Dispatch<React.SetStateAction<'player1' | 'player2'>>;
   capturedPieces: PieceType[]; 
   setCapturedPieces: React.Dispatch<React.SetStateAction<PieceType[]>>;
   handleSquareClick: (index: number) => void;
@@ -417,6 +418,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         highlightedSquares,
         setHighlightedSquares,
         currentTurn,
+        setCurrentTurn,
         handleSquareClick,
         movePiece,
         lastMove,

@@ -1,405 +1,254 @@
-import React, { createContext, useState, type ReactNode } from 'react';
-import { generatePseudoLegalMoves } from '../engine/moveGenerators';
-import * as Engine from '../engine/logic';
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import PromotionDialog from '../components/PromotionDialog';
-import { v4 as uuidv4 } from 'uuid';
-import { useEffect } from 'react';
 import { chooseBestMove } from '../ai/search';
-
-export type PieceType = {
-  id: string;
-  name: string; // 'pawn', 'rook', etc.
-  color: string;
-  player: 'player1' | 'player2' | null;
-  capturedBy?: 'player1' | 'player2';
-  location: number;
-  hasMoved?: boolean;
-};
-
-type GameMode = 'human-vs-human' | 'human-vs-ai' | null;
-
-type Move = {
-  from: number;
-  to: number;
-  piece: PieceType;
-  captured?: PieceType;
-};
-
-
-type CastlingRights = {
-  K: boolean; // White kingside
-  Q: boolean; // White queenside
-  k: boolean; // Black kingside
-  q: boolean; // Black queenside
-};
-
-export type SquareType = {
-  piece: PieceType | null;
-};
-
-type BoardContextType = {
-  squares: SquareType[];
-  setSquares: React.Dispatch<React.SetStateAction<SquareType[]>>;
-  selectedPieceId: string | null;
-  highlightedSquares: number[];
-  setHighlightedSquares: React.Dispatch<React.SetStateAction<number[]>>;
-  currentTurn: 'player1' | 'player2';
-  setCurrentTurn: React.Dispatch<React.SetStateAction<'player1' | 'player2'>>;
-  capturedPieces: PieceType[]; 
-  setCapturedPieces: React.Dispatch<React.SetStateAction<PieceType[]>>;
-  handleSquareClick: (index: number) => void;
-  handlePieceClick: (id: string, location: number, paths: number[]) => void;
-  movePiece: (fromIndex: number, toIndex: number) => void;
-  lastMove: Move | null;
-  setLastMove: React.Dispatch<React.SetStateAction<Move | null>>;
-  kingInCheckSquare: number | null;
-  enPassantSquare: number | null;
-  setEnPassantSquare: (pos: number | null) => void;
-  promotionPawn: { index: number; player: 'player1' | 'player2' } | null;
-  setPromotionPawn: React.Dispatch<React.SetStateAction<{ index: number; player: 'player1' | 'player2' } | null>>;
-  promotePawn: (pieceName: 'queen' | 'rook' | 'bishop' | 'knight') => void;
-  humanPlayer: 'player1' | 'player2' | null;
-  setHumanPlayer: React.Dispatch<React.SetStateAction<'player1' | 'player2' | null>>;
-  setGameMode: React.Dispatch<React.SetStateAction<GameMode>>;
-  gameMode: GameMode;
-  createInitialSquares: () => SquareType[];
-};
-
-export const BoardContext = createContext<BoardContextType | undefined>(undefined);
+import { BoardContext } from './board-context';
+import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory, cloneSquares, createInitialGameSnapshot, createInitialSquares } from '../engine/boardState';
+import { applyLegalMove, getLegalMoves } from '../engine/game';
+import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
+import type { GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const initialSnapshot = useMemo(() => createInitialGameSnapshot(), []);
 
-  const [kingInCheckSquare, setKingInCheckSquare] = useState<number | null>(null);
-
-  const createInitialSquares = (): SquareType[] => {
-    const squares: SquareType[] = Array.from({ length: 64 }, () => ({ piece: null }));
-  
-    const createPiece = (name: string, player: 'player1' | 'player2', location: number): PieceType => ({
-      id: uuidv4(),
-      name,
-      color: player === 'player1' ? 'white' : 'brown',
-      player,
-      location,
-    });
-  
-    // Player2 pieces (top)
-    for (let i = 0; i < 8; i++) squares[8 + i].piece = createPiece('pawn', 'player2', 8 + i);
-    squares[0].piece = createPiece('rook', 'player2', 0);
-    squares[7].piece = createPiece('rook', 'player2', 7);
-    squares[1].piece = createPiece('knight', 'player2', 1);
-    squares[6].piece = createPiece('knight', 'player2', 6);
-    squares[2].piece = createPiece('bishop', 'player2', 2);
-    squares[5].piece = createPiece('bishop', 'player2', 5);
-    squares[3].piece = createPiece('queen', 'player2', 3);
-    squares[4].piece = createPiece('king', 'player2', 4);
-  
-    // Player1 pieces (bottom)
-    for (let i = 0; i < 8; i++) squares[48 + i].piece = createPiece('pawn', 'player1', 48 + i);
-    squares[56].piece = createPiece('rook', 'player1', 56);
-    squares[63].piece = createPiece('rook', 'player1', 63);
-    squares[57].piece = createPiece('knight', 'player1', 57);
-    squares[62].piece = createPiece('knight', 'player1', 62);
-    squares[58].piece = createPiece('bishop', 'player1', 58);
-    squares[61].piece = createPiece('bishop', 'player1', 61);
-    squares[59].piece = createPiece('queen', 'player1', 59);
-    squares[60].piece = createPiece('king', 'player1', 60);
-  
-    return squares;
-  };
-
-  const [squares, setSquares] = useState<SquareType[]>(createInitialSquares());
-
+  const [squares, setSquares] = useState(() => cloneSquares(initialSnapshot.squares));
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
-
   const [highlightedSquares, setHighlightedSquares] = useState<number[]>([]);
-
-  const [capturedPieces, setCapturedPieces] = useState<PieceType[]>([]);
-
-  const [enPassantSquare, setEnPassantSquare] = useState<number | null>(null);
-
-  const [lastMove, setLastMove] = useState<Move | null>(null);
-
-  const [humanPlayer, setHumanPlayer] = useState<'player1' | 'player2' | null>(null);
-
-  const [currentTurn, setCurrentTurn] = useState<'player1' | 'player2'>('player1');
-
+  const [capturedPieces, setCapturedPieces] = useState(() => cloneCapturedPieces(initialSnapshot.capturedPieces));
+  const [enPassantSquare, setEnPassantSquare] = useState<number | null>(initialSnapshot.enPassantSquare);
+  const [lastMove, setLastMove] = useState(() => cloneLastMove(initialSnapshot.lastMove));
+  const [humanPlayer, setHumanPlayer] = useState<Player | null>(null);
+  const [currentTurn, setCurrentTurn] = useState<Player>(initialSnapshot.currentTurn);
   const [gameMode, setGameMode] = useState<GameMode>(null);
+  const [kingInCheckSquare, setKingInCheckSquare] = useState<number | null>(initialSnapshot.kingInCheckSquare);
+  const [moveHistory, setMoveHistory] = useState(() => cloneMoveHistory(initialSnapshot.moveHistory));
+  const [promotionPawn, setPromotionPawn] = useState<{ index: number; player: Player } | null>(null);
+  const [pendingPromotionMove, setPendingPromotionMove] = useState<{ from: number; to: number } | null>(null);
+  const [historySnapshots, setHistorySnapshots] = useState<GameSnapshot[]>(() => [cloneGameSnapshot(initialSnapshot)]);
+  const [historyIndex, setHistoryIndex] = useState(0);
 
-  const [promotionPawn, setPromotionPawn] = useState<{
-    index: number;
-    player: 'player1' | 'player2';
-  } | null>(null);
+  const currentSnapshot = useMemo<GameSnapshot>(
+    () => ({
+      squares,
+      capturedPieces,
+      currentTurn,
+      enPassantSquare,
+      lastMove,
+      kingInCheckSquare,
+      moveHistory,
+    }),
+    [capturedPieces, currentTurn, enPassantSquare, kingInCheckSquare, lastMove, moveHistory, squares]
+  );
 
-  useEffect(() => {
-    if (!humanPlayer) return;
-    // if human picks player2, AI should start as player1
-    setCurrentTurn(humanPlayer === 'player2' ? 'player1' : 'player1');
-  }, [humanPlayer]);
-  
-  useEffect(() => {
-    if (!humanPlayer) return;
-    if (gameMode !== 'human-vs-ai') return; // <-- only run AI in human-vs-ai mode
+  const restoreSnapshot = useCallback((snapshot: GameSnapshot) => {
+    setSquares(cloneSquares(snapshot.squares));
+    setCapturedPieces(cloneCapturedPieces(snapshot.capturedPieces));
+    setCurrentTurn(snapshot.currentTurn);
+    setEnPassantSquare(snapshot.enPassantSquare);
+    setLastMove(cloneLastMove(snapshot.lastMove));
+    setKingInCheckSquare(snapshot.kingInCheckSquare);
+    setMoveHistory(cloneMoveHistory(snapshot.moveHistory));
+    setSelectedPieceId(null);
+    setHighlightedSquares([]);
+    setPromotionPawn(null);
+    setPendingPromotionMove(null);
+  }, []);
 
-    // Determine AI player
-    const aiPlayer: 'player1' | 'player2' = humanPlayer === 'player1' ? 'player2' : 'player1';
-    if (currentTurn !== aiPlayer) return; // only run when it's AI's turn
+  const pushSnapshot = useCallback(
+    (snapshot: GameSnapshot) => {
+      restoreSnapshot(snapshot);
+      setHistorySnapshots(previousSnapshots => [
+        ...previousSnapshots.slice(0, historyIndex + 1),
+        cloneGameSnapshot(snapshot),
+      ]);
+      setHistoryIndex(historyIndex + 1);
+    },
+    [historyIndex, restoreSnapshot]
+  );
 
-    // Run search in a timeout so React can render the board update first
-    const timerId = setTimeout(() => {
-      const move = chooseBestMove(squares, aiPlayer, 3);
-      if (!move) return;
+  const finishMove = useCallback(
+    (fromIndex: number, toIndex: number, promotionPiece?: PromotionPieceName) => {
+      const legalMoves = getLegalMoves(currentSnapshot.squares, currentSnapshot.currentTurn, currentSnapshot.enPassantSquare);
+      const selectedMove = legalMoves.find(
+        move =>
+          move.from === fromIndex &&
+          move.to === toIndex &&
+          (promotionPiece ? move.promotion === promotionPiece : true)
+      );
 
-      let promotionPiece: "queen" | "rook" | "bishop" | "knight" | undefined;
-      if (move.isPromotion) {
-        promotionPiece = move.promote ?? 'queen';
+      if (!selectedMove) {
+        return;
       }
 
-      movePiece(move.from, move.to, undefined, promotionPiece);
-    }, 0);
+      if (selectedMove.promotion && !promotionPiece) {
+        setPromotionPawn({
+          index: toIndex,
+          player: selectedMove.piece.player as Player,
+        });
+        setPendingPromotionMove({ from: fromIndex, to: toIndex });
+        setSelectedPieceId(null);
+        setHighlightedSquares([]);
+        return;
+      }
 
-    return () => clearTimeout(timerId);
-  }, [currentTurn, humanPlayer, gameMode, squares, lastMove]);
-  
-  
-  function castlingRightsToString(c: CastlingRights): string {
-    const s = (c.K ? "K" : "") + (c.Q ? "Q" : "") + (c.k ? "k" : "") + (c.q ? "q" : "");
-    return s || "-";
-  }
+      const { snapshot, isCheckmate, isStalemate } = applyLegalMove(currentSnapshot, selectedMove, legalMoves);
+      pushSnapshot(snapshot);
 
-  const promotePawn = (piece: 'queen' | 'rook' | 'bishop' | 'knight') => {
-    if (!promotionPawn) return;
-  
-    const { index, player } = promotionPawn;
-  
-    setSquares(prevSquares => {
-      const newSquares = prevSquares.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
-  
-      const oldPawn = newSquares[index].piece;
-      if (!oldPawn) return newSquares;
-  
-      // Replace pawn with chosen piece
-      newSquares[index].piece = {
-        id: uuidv4(),
-        name: piece,
-        color: oldPawn.color,
-        player: oldPawn.player,
-        location: index,
-        hasMoved: true
-      };
-  
-      // Check if new piece is putting opponent king in check
-      const opponent = Engine.opponent(player);
-      const kingSquare = newSquares.findIndex(
-        sq => sq.piece?.player === opponent && sq.piece.name === 'king'
-      );
-      setKingInCheckSquare(
-        kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, player, newSquares)
-          ? kingSquare
-          : null
-      );
-  
-      // Check for checkmate or stalemate
       setTimeout(() => {
-        if (Engine.isCheckmate(opponent, newSquares)) {
-          alert(`${opponent} is checkmated!`);
-        } else if (Engine.isStalemate(opponent, newSquares)) {
+        if (isCheckmate) {
+          alert(`${snapshot.currentTurn} is checkmated!`);
+        } else if (isStalemate) {
           alert('Stalemate!');
         }
       }, 0);
-  
-      return newSquares;
-    });
-  
-    // Clear promotion state
-    setPromotionPawn(null);
-  
-    // Switch turn
-    setCurrentTurn(Engine.opponent(player));
-  
-    // Reset selection and highlights
-    setSelectedPieceId(null);
-    setHighlightedSquares([]);
-  
-    console.log(`Pawn promoted at index ${index} to ${piece}`);
-  };
-  
-  const movePiece = (fromIndex: number, toIndex: number, enPassantSquare?: number, promotionPiece?: "queen" | "rook" | "bishop" | "knight") => {
-    if (!squares[fromIndex]?.piece) {
-      console.warn('Attempted to move from an empty or undefined square', fromIndex);
-      return;
-    }
-    const movingPiece = { ...squares[fromIndex].piece!, location: toIndex, hasMoved: true };
-    const targetPiece = squares[toIndex].piece;
-  
-    // Clone board
-    const newSquares = squares.map(sq => ({ piece: sq.piece ? { ...sq.piece } : null }));
-  
-    // --- Move piece ---
-    newSquares[toIndex].piece = movingPiece;
-    newSquares[fromIndex].piece = null;
-  
-    // --- Normal capture ---
-    const updatedCapturedPieces = [...capturedPieces];
-    if (targetPiece) {
-      updatedCapturedPieces.push({ ...targetPiece, id: uuidv4(), capturedBy: movingPiece.player as 'player1' | 'player2' });
-    }
-  
-    // --- En Passant capture ---
-    if (movingPiece.name === 'pawn' && enPassantSquare !== null && toIndex === enPassantSquare) {
-      const capturedIndex = movingPiece.player === 'player1' ? toIndex + 8 : toIndex - 8;
-      const capturedPawn = newSquares[capturedIndex].piece;
-      if (capturedPawn && capturedPawn.name === 'pawn') {
-        console.log("En passant triggered!", capturedIndex, capturedPawn);
-        newSquares[capturedIndex].piece = null;
-        updatedCapturedPieces.push({ ...capturedPawn, id: uuidv4(), capturedBy: movingPiece.player as 'player1' | 'player2' });
-      }
-    }
-  
-    setCapturedPieces(updatedCapturedPieces);
-  
-    // --- Pawn promotion ---
-    // --- Pawn promotion ---
-  const isPromotionRow =
-  (movingPiece.player === 'player1' && toIndex >= 0 && toIndex <= 7) ||
-  (movingPiece.player === 'player2' && toIndex >= 56 && toIndex <= 63);
+    },
+    [currentSnapshot, pushSnapshot]
+  );
 
-  if (movingPiece.name === 'pawn' && isPromotionRow) {
-    if (promotionPiece) {
-      movingPiece.name = promotionPiece; // promote immediately
-    } else {
-      setSquares(newSquares);
-      setPromotionPawn({ index: toIndex, player: movingPiece.player as 'player1' | 'player2' });
+  const movePiece = useCallback(
+    (fromIndex: number, toIndex: number, _ignoredEnPassantSquare?: number, promotionPiece?: PromotionPieceName) => {
+      if (!currentSnapshot.squares[fromIndex]?.piece) {
+        return;
+      }
+
+      finishMove(fromIndex, toIndex, promotionPiece);
+    },
+    [currentSnapshot.squares, finishMove]
+  );
+
+  const promotePawn = useCallback(
+    (pieceName: PromotionPieceName) => {
+      if (!pendingPromotionMove) {
+        return;
+      }
+
+      const pendingMove = pendingPromotionMove;
+      setPromotionPawn(null);
+      setPendingPromotionMove(null);
+      finishMove(pendingMove.from, pendingMove.to, pieceName);
+    },
+    [finishMove, pendingPromotionMove]
+  );
+
+  useEffect(() => {
+    if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn) {
       return;
     }
-  }
-  
-    // --- Castling ---
-    if (movingPiece.name === 'king') {
-      const delta = toIndex - fromIndex;
-      const row = movingPiece.player === 'player1' ? 7 : 0;
-  
-      if (delta === 2) { // king-side
-        const rookFrom = row * 8 + 7;
-        const rookTo = row * 8 + 5;
-        const rookPiece = { ...newSquares[rookFrom].piece!, location: rookTo, hasMoved: true };
-        newSquares[rookTo].piece = rookPiece;
-        newSquares[rookFrom].piece = null;
-      } else if (delta === -2) { // queen-side
-        const rookFrom = row * 8 + 0;
-        const rookTo = row * 8 + 3;
-        const rookPiece = { ...newSquares[rookFrom].piece!, location: rookTo, hasMoved: true };
-        newSquares[rookTo].piece = rookPiece;
-        newSquares[rookFrom].piece = null;
-      }
+
+    const aiPlayer: Player = humanPlayer === 'player1' ? 'player2' : 'player1';
+    if (currentTurn !== aiPlayer) {
+      return;
     }
-  
-    // --- Update board and turn ---
-    setSquares(newSquares);
-    setCurrentTurn(Engine.opponent(currentTurn));
-  
-    // --- Reset selection and highlights ---
-    setSelectedPieceId(null);
-    setHighlightedSquares([]);
-  
-    // --- King in check highlighting ---
-    const kingSquare = newSquares.findIndex(
-      sq => sq.piece?.player === Engine.opponent(currentTurn) && sq.piece.name === 'king'
-    );
-    setKingInCheckSquare(
-      kingSquare >= 0 && Engine.isSquareAttacked(kingSquare, currentTurn, newSquares)
-        ? kingSquare
-        : null
-    );
-  
-    // --- En passant square ---
-    if (movingPiece.name === 'pawn' && Math.abs(toIndex - fromIndex) === 16) {
-      setEnPassantSquare((fromIndex + toIndex) / 2);
-    } else {
-      setEnPassantSquare(null);
-    }
-  
-    // --- Track lastMove for FEN ---
-    const lastMoveObj: Move = { from: fromIndex, to: toIndex, piece: movingPiece, captured: targetPiece || undefined };
-    setLastMove(lastMoveObj);
-  
-    // --- End-of-game checks ---
-    setTimeout(() => {
-      if (Engine.isCheckmate(Engine.opponent(currentTurn), newSquares)) {
-        alert(`${Engine.opponent(currentTurn)} is checkmated!`);
-      } else if (Engine.isStalemate(Engine.opponent(currentTurn), newSquares)) {
-        alert('Stalemate!');
+
+    const timerId = setTimeout(() => {
+      const move = chooseBestMove(squares, aiPlayer, 3);
+      if (!move) {
+        return;
       }
+
+      finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
     }, 0);
-  };
-  
+
+    return () => clearTimeout(timerId);
+  }, [currentTurn, finishMove, gameMode, humanPlayer, promotionPawn, squares]);
+
+  const resetGame = useCallback(() => {
+    const snapshot = createInitialGameSnapshot();
+    restoreSnapshot(snapshot);
+    setHumanPlayer(null);
+    setGameMode(null);
+    setHistorySnapshots([cloneGameSnapshot(snapshot)]);
+    setHistoryIndex(0);
+  }, [restoreSnapshot]);
+
+  const undoMove = useCallback(() => {
+    if (historyIndex === 0) {
+      return;
+    }
+
+    const nextIndex = historyIndex - 1;
+    restoreSnapshot(historySnapshots[nextIndex]);
+    setHistoryIndex(nextIndex);
+  }, [historyIndex, historySnapshots, restoreSnapshot]);
+
+  const redoMove = useCallback(() => {
+    if (historyIndex >= historySnapshots.length - 1) {
+      return;
+    }
+
+    const nextIndex = historyIndex + 1;
+    restoreSnapshot(historySnapshots[nextIndex]);
+    setHistoryIndex(nextIndex);
+  }, [historyIndex, historySnapshots, restoreSnapshot]);
+
+  const exportCurrentPgn = useCallback(() => exportPgn(currentSnapshot), [currentSnapshot]);
+
+  const importPgn = useCallback(
+    (pgn: string) => {
+      const importedSnapshots = importPgnSnapshots(pgn);
+      const latestSnapshot = importedSnapshots[importedSnapshots.length - 1];
+
+      restoreSnapshot(latestSnapshot);
+      setGameMode('human-vs-human');
+      setHumanPlayer(null);
+      setHistorySnapshots(importedSnapshots.map(snapshot => cloneGameSnapshot(snapshot)));
+      setHistoryIndex(importedSnapshots.length - 1);
+    },
+    [restoreSnapshot]
+  );
 
   const handleSquareClick = (toIndex: number) => {
-    if (gameMode === 'human-vs-ai' && currentTurn !== humanPlayer) return; // block AI turn
+    if (gameMode === 'human-vs-ai' && currentTurn !== humanPlayer) {
+      return;
+    }
+
     const clickedSquare = squares[toIndex];
     const clickedPiece = clickedSquare.piece;
-  
-    // If a piece is already selected
-    const fromIndex = squares.findIndex(sq => sq.piece?.id === selectedPieceId);
-  
-    // --- No piece selected yet ---
+    const fromIndex = squares.findIndex(square => square.piece?.id === selectedPieceId);
+
     if (fromIndex === -1) {
-      if (!clickedPiece) return; // empty square, nothing to select
-      if (clickedPiece.player !== currentTurn) return; // ignore opponent's pieces
-  
-      const pseudoMoves = generatePseudoLegalMoves(clickedPiece, toIndex, squares, enPassantSquare as number | undefined);
-  
-      // Include castling moves for the king
-      if (clickedPiece.name === 'king' && !clickedPiece.hasMoved) {
-        pseudoMoves.push(...Engine.calculateCastlingMoves(clickedPiece, squares));
+      if (!clickedPiece || clickedPiece.player !== currentTurn) {
+        return;
       }
-  
-      const legalMoves = Engine.filterLegalMoves(clickedPiece, toIndex, pseudoMoves, squares);
-      if (!legalMoves.length) return; // piece has no legal moves
-  
+
+      const legalMoves = getLegalMoves(squares, currentTurn, enPassantSquare).filter(move => move.from === toIndex);
+      if (!legalMoves.length) {
+        return;
+      }
+
       setSelectedPieceId(clickedPiece.id);
-      setHighlightedSquares(legalMoves);
+      setHighlightedSquares([...new Set(legalMoves.map(move => move.to))]);
       return;
     }
-  
-    // --- A piece is already selected, attempt move ---
-    const piece = squares[fromIndex].piece!;
-    if (!piece) {
+
+    const selectedPiece = squares[fromIndex].piece;
+    if (!selectedPiece) {
       setSelectedPieceId(null);
       setHighlightedSquares([]);
       return;
     }
-  
-    const pseudoMoves = generatePseudoLegalMoves(piece, fromIndex, squares, enPassantSquare as number | undefined);
-    if (piece.name === 'king' && !piece.hasMoved) {
-      pseudoMoves.push(...Engine.calculateCastlingMoves(piece, squares));
-    }
-  
-    const legalMoves = Engine.filterLegalMoves(piece, fromIndex, pseudoMoves, squares);
-  
-    if (!legalMoves.includes(toIndex)) {
-      // Invalid move, deselect
+
+    const legalMoves = getLegalMoves(squares, currentTurn, enPassantSquare).filter(move => move.from === fromIndex);
+    if (!legalMoves.some(move => move.to === toIndex)) {
       setSelectedPieceId(null);
       setHighlightedSquares([]);
       return;
     }
-    
-    // Valid move, perform it
-    movePiece(fromIndex, toIndex, enPassantSquare as number | undefined);
-  
-    // Deselect piece after moving
+
+    movePiece(fromIndex, toIndex, enPassantSquare ?? undefined);
     setSelectedPieceId(null);
     setHighlightedSquares([]);
   };
 
-  
-  const handlePieceClick = (id: string, location: number, paths: number[]) => {
-    const piece = squares.find(sq => sq.piece?.id === id)?.piece;
-    if (!piece || piece.player !== currentTurn) return;
+  const handlePieceClick = (id: string, _location: number, paths: number[]) => {
+    const piece = squares.find(square => square.piece?.id === id)?.piece;
+    if (!piece || piece.player !== currentTurn) {
+      return;
+    }
 
     setSelectedPieceId(id);
     setHighlightedSquares(paths);
   };
-  
+
   return (
     <BoardContext.Provider
       value={{
@@ -428,20 +277,18 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setGameMode,
         gameMode,
         createInitialSquares,
+        moveHistory,
+        exportPgn: exportCurrentPgn,
+        importPgn,
+        undoMove,
+        redoMove,
+        canUndo: historyIndex > 0,
+        canRedo: historyIndex < historySnapshots.length - 1,
+        resetGame,
       }}
     >
       {children}
-      {promotionPawn && (
-        <>
-         {console.log('Rendering promotion dialog for player', promotionPawn.player)}
-        <PromotionDialog
-          //player={promotionPawn.player}
-          
-          onSelect={piece => {console.log('Promotion selected:', piece); 
-          promotePawn(piece as 'queen' | 'rook' | 'bishop' | 'knight')}}
-        />
-        </>
-      )}
+      {promotionPawn ? <PromotionDialog onSelect={promotePawn} /> : null}
     </BoardContext.Provider>
   );
 };

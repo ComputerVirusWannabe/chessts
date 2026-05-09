@@ -1,15 +1,12 @@
-import { type SquareType, type PieceType } from '../context/BoardContext';
+import { type PieceType, type Player, type PromotionPieceName, type SquareType } from '../types/chess';
 import { generatePseudoLegalMoves } from '../engine/moveGenerators';
 import * as Engine from '../engine/logic';
 import { calculateCastlingMoves } from '../engine/logic';
 
-// Types
-export type Player = 'player1' | 'player2';
-
 export type Move = {
   from: number;
   to: number;
-  promote?: 'queen' | 'rook' | 'bishop' | 'knight';
+  promote?: PromotionPieceName;
   isCapture?: boolean;
   isPromotion?: boolean;
 };

@@ -1,85 +1,60 @@
-import React, { useEffect, useImperativeHandle, useState, useContext } from 'react';
+import React, { useContext, useEffect, useImperativeHandle, useState } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
-import { BoardContext } from '../context/BoardContext';
-import { type PieceType } from '../context/BoardContext';
+import { BoardContext } from '../context/board-context';
 import { generatePseudoLegalMoves } from '../engine/moveGenerators';
 import * as Engine from '../engine/logic';
+import { pieceSymbolsBlack, pieceSymbolsWhite } from './pieceSymbols';
+import type { PieceType } from '../types/chess';
 
 export type PiecePropsType = PieceType & {
-  ref?: React.Ref<any>;
+  ref?: React.Ref<{ getName: () => string; getLegitimatePaths: () => number[] }>;
 };
 
-export type PieceRefType = {
-  getName: () => string;
-  getLegitimatePaths: () => number[];
-};
-export const pieceSymbolsBlack: Record<string, string> = {
-  pawn: '♟',     // player2
-  rook: '♜',
-  knight: '♞',
-  bishop: '♝',
-  queen: '♛',
-  king: '♚'
-};
-
-export const pieceSymbolsWhite: Record<string, string> = {
-  pawn: '♙',     // player1
-  rook: '♖',
-  knight: '♘',
-  bishop: '♗',
-  queen: '♕',
-  king: '♔'
-};
-
-const Piece: React.FC<PiecePropsType> = (props) => {
+const Piece: React.FC<PiecePropsType> = props => {
   const [legitimatePaths, setLegitimatePaths] = useState<number[]>([]);
-  const pieceName = props.name || '';
-  const hasMoved = props.hasMoved || false;
+  const pieceName = props.name;
+  const hasMoved = props.hasMoved ?? false;
 
   const theme = useContext(ThemeContext);
   const boardContext = useContext(BoardContext);
-  if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
-  const boardSquares = boardContext.squares;
+  if (!boardContext) {
+    throw new Error('BoardContext must be used within a BoardProvider');
+  }
 
-  // ----- LEGITIMATE MOVES -----
-  const calculateLegitimatePaths = (): number[] => {
-    if (!props.player || !props.name) {
-      setLegitimatePaths([]);
-      return [];
-    }
-
-    const pseudoMoves = generatePseudoLegalMoves(props, props.location, boardSquares);
-
-    // Castling logic for the king
-    if (pieceName === 'king' && !hasMoved) {
-      const castlingMoves = Engine.calculateCastlingMoves(props, boardSquares);
-      pseudoMoves.push(...castlingMoves);
-    }
-
-    const legalMoves = Engine.filterLegalMoves(props, props.location, pseudoMoves, boardSquares);
-
-    setLegitimatePaths(legalMoves);
-    return legalMoves;
-  };
+  const { squares: boardSquares, enPassantSquare } = boardContext;
 
   useEffect(() => {
-    calculateLegitimatePaths();
-  }, [props.name, props.location, props.player, boardSquares, hasMoved]);
+    if (!props.player) {
+      setLegitimatePaths([]);
+      return;
+    }
 
-  // ----- IMPERATIVE HANDLE -----
+    const pseudoMoves = generatePseudoLegalMoves(props, props.location, boardSquares, enPassantSquare ?? undefined);
+    if (pieceName === 'king' && !hasMoved) {
+      pseudoMoves.push(...Engine.calculateCastlingMoves(props, boardSquares));
+    }
+
+    const legalMoves = Engine.filterLegalMoves(
+      props,
+      props.location,
+      pseudoMoves,
+      boardSquares,
+      enPassantSquare ?? undefined
+    );
+
+    setLegitimatePaths(legalMoves);
+  }, [boardSquares, enPassantSquare, hasMoved, pieceName, props]);
+
   useImperativeHandle(props.ref, () => ({
     getName: () => props.name,
     getLegitimatePaths: () => legitimatePaths,
   }));
 
-  // ----- HANDLER -----
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent double firing if parent also has onClick
-    if (!boardContext) return;
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
     boardContext.handleSquareClick(props.location);
   };
 
-  // ----- STYLES -----
   const styles: React.CSSProperties = {
     backgroundColor: props.color,
     color: theme?.theme === 'dark' ? 'orange' : 'black',
@@ -88,21 +63,18 @@ const Piece: React.FC<PiecePropsType> = (props) => {
     fontWeight: 'bold',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '2rem',        // scale symbol nicely
+    fontSize: '2rem',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 0,              // prevent button from overflowing
-    boxSizing: 'border-box', // keeps it inside parent
+    padding: 0,
+    boxSizing: 'border-box',
   };
-  
 
   return (
     <div className="card">
       <button onClick={handleClick} style={styles}>
-        {props.player === 'player1' 
-          ? pieceSymbolsWhite[props.name] 
-          : pieceSymbolsBlack[props.name]}
+        {props.player === 'player1' ? pieceSymbolsWhite[props.name] : pieceSymbolsBlack[props.name]}
       </button>
     </div>
   );

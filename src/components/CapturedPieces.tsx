@@ -1,17 +1,9 @@
 import React from 'react';
-import { pieceSymbolsBlack } from './Piece';
-import { pieceSymbolsWhite } from './Piece';
-
-export type CapturedPiece = {
-  id: string;
-  name: string;
-  color: string;
-  player: 'player1' | 'player2' | null;
-  capturedBy?: 'player1' | 'player2';
-};
+import { pieceSymbolsBlack, pieceSymbolsWhite } from './pieceSymbols';
+import type { PieceType } from '../types/chess';
 
 type CapturedPiecesProps = {
-  capturedPieces: CapturedPiece[];
+  capturedPieces: PieceType[];
 };
 
 const CapturedPieces: React.FC<CapturedPiecesProps> = ({ capturedPieces }) => {

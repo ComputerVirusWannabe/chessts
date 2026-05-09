@@ -1,10 +1,11 @@
 import React, { useContext } from 'react';
 import Square from './Square';
 import StartGame from './StartGame';
-import { BoardContext } from '../context/BoardContext';
+import { BoardContext } from '../context/board-context';
 import { ThemeContext } from '../context/ThemeContext';
 import CapturedPieces from './CapturedPieces';
 import '../styles/Board.css';
+import { useState } from 'react';
 
 
 const Board: React.FC = () => {
@@ -13,6 +14,8 @@ const Board: React.FC = () => {
 
   const { humanPlayer, squares, capturedPieces, currentTurn, gameMode } = boardContext;
   const themeContext = useContext(ThemeContext);
+  const [pgnText, setPgnText] = useState('');
+  const [pgnMessage, setPgnMessage] = useState('');
 
   // Show StartGame if player hasn't chosen a side yet
   if (!gameMode) return <StartGame />;
@@ -58,19 +61,63 @@ const Board: React.FC = () => {
 
       <button
         onClick={() => {
-          boardContext.setSquares(boardContext.createInitialSquares());
-          boardContext.setCapturedPieces([]);
-          boardContext.setHumanPlayer(null);
-          boardContext.setGameMode(null);
-          boardContext.setCurrentTurn('player1');
-          boardContext.setLastMove(null);
-          boardContext.setEnPassantSquare(null);
-          boardContext.setPromotionPawn(null);
-          boardContext.setHighlightedSquares([]);
+          boardContext.resetGame();
+          setPgnText('');
+          setPgnMessage('');
         }}
       >
         Back to Start
       </button>
+
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', margin: '10px 0' }}>
+        <button
+          onClick={() => {
+            setPgnText(boardContext.exportPgn());
+            setPgnMessage('PGN exported.');
+          }}
+        >
+          Export PGN
+        </button>
+        <button onClick={boardContext.undoMove} disabled={!boardContext.canUndo}>
+          Undo
+        </button>
+        <button onClick={boardContext.redoMove} disabled={!boardContext.canRedo}>
+          Redo
+        </button>
+      </div>
+
+      <div style={{ margin: '0 auto 15px', maxWidth: '560px' }}>
+        <textarea
+          value={pgnText}
+          onChange={event => setPgnText(event.target.value)}
+          placeholder="Paste PGN here to import, or export the current game."
+          rows={8}
+          style={{ width: '100%', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+          <button
+            onClick={() => {
+              try {
+                boardContext.importPgn(pgnText);
+                setPgnMessage('PGN imported successfully.');
+              } catch (error) {
+                setPgnMessage(error instanceof Error ? error.message : 'Failed to import PGN.');
+              }
+            }}
+          >
+            Import PGN
+          </button>
+          <button
+            onClick={() => {
+              setPgnText('');
+              setPgnMessage('');
+            }}
+          >
+            Clear PGN
+          </button>
+        </div>
+        {pgnMessage ? <p>{pgnMessage}</p> : null}
+      </div>
 
 
       {/* Current turn display */}
@@ -91,16 +138,16 @@ const Board: React.FC = () => {
           {renderSquares.map((sq, index) => {
             const actualIndex = actualIndexFor(index);
             return (
-              <Square
-                key={actualIndex}
-                index={actualIndex}
-                location={actualIndex}
-                id={sq.piece?.id || ''}
-                name={sq.piece?.name || ''}
-                color={sq.piece?.color || ''}
-                player={sq.piece?.player || null}
-                hasMoved={sq.piece?.hasMoved || false}
-              />
+                <Square
+                  key={actualIndex}
+                  index={actualIndex}
+                  location={actualIndex}
+                  id={sq.piece?.id}
+                  name={sq.piece?.name}
+                  color={sq.piece?.color}
+                  player={sq.piece?.player || null}
+                  hasMoved={sq.piece?.hasMoved}
+                />
             );
           })}
         </div>

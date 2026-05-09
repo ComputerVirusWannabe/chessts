@@ -45,6 +45,8 @@ Designed for usability and readability:
 - Responsive board interactions
 - Human vs Human mode
 - Human vs AI mode
+- PGN export/import controls
+- Undo/redo controls
 
 ## Performance-Focused Architecture
 The project separates:
@@ -127,7 +129,6 @@ The long-term goal is to continue improving the engine strength and overall poli
 
 - Checkmate notification may occasionally trigger too early when the AI wins.
 - The engine has only one level of difficulty.
-- Unable to undo/redo moves.
 - Not yet able to save the state of the board when the browser/game is refreshed.
 
 ---
@@ -135,8 +136,6 @@ The long-term goal is to continue improving the engine strength and overall poli
 # Future Improvements
 
 Planned features include:
-- PGN export/import
-- Undo/redo system
 - Engine statistics
 - Improved AI evaluation
 - Multiplayer support

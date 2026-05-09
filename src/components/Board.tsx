@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import Square from './Square';
 import StartGame from './StartGame';
-import { BoardContext, type SquareType } from '../context/BoardContext';
+import { BoardContext } from '../context/BoardContext';
 import { ThemeContext } from '../context/ThemeContext';
 import CapturedPieces from './CapturedPieces';
 import '../styles/Board.css';
@@ -11,7 +11,7 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, createInitialSquares } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode } = boardContext;
   const themeContext = useContext(ThemeContext);
 
   // Show StartGame if player hasn't chosen a side yet
@@ -74,7 +74,10 @@ const Board: React.FC = () => {
           boardContext.setCapturedPieces([]);
           boardContext.setHumanPlayer(null);
           boardContext.setGameMode(null);
+          boardContext.setCurrentTurn('player1');
           boardContext.setLastMove(null);
+          boardContext.setEnPassantSquare(null);
+          boardContext.setPromotionPawn(null);
           boardContext.setHighlightedSquares([]);
         }}
       >

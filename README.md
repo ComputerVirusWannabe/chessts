@@ -27,6 +27,7 @@ The engine fully supports:
 - Pawn promotion
 - Turn validation
 - Piece capture logic
+- FEN board state generation for engine interoperability
 
 ## AI Opponent
 Includes a custom-built chess AI using:

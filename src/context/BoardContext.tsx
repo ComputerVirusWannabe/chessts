@@ -11,6 +11,7 @@ export type PieceType = {
   name: string; // 'pawn', 'rook', etc.
   color: string;
   player: 'player1' | 'player2' | null;
+  capturedBy?: 'player1' | 'player2';
   location: number;
   hasMoved?: boolean;
 };
@@ -238,9 +239,9 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     newSquares[fromIndex].piece = null;
   
     // --- Normal capture ---
-    let updatedCapturedPieces = [...capturedPieces];
+    const updatedCapturedPieces = [...capturedPieces];
     if (targetPiece) {
-      updatedCapturedPieces.push({ ...targetPiece, id: uuidv4() });
+      updatedCapturedPieces.push({ ...targetPiece, id: uuidv4(), capturedBy: movingPiece.player as 'player1' | 'player2' });
     }
   
     // --- En Passant capture ---
@@ -250,7 +251,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (capturedPawn && capturedPawn.name === 'pawn') {
         console.log("En passant triggered!", capturedIndex, capturedPawn);
         newSquares[capturedIndex].piece = null;
-        updatedCapturedPieces.push({ ...capturedPawn });
+        updatedCapturedPieces.push({ ...capturedPawn, id: uuidv4(), capturedBy: movingPiece.player as 'player1' | 'player2' });
       }
     }
   
@@ -382,16 +383,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return;
     }
     
-    //Pawn Promotion check:
-    if (piece.name === 'pawn') {
-      const finalRank = piece.player === 'player1' ? 0 : 7;
-      if (toIndex / 8 === finalRank) {
-        console.log( "Pawn promotion triggered!");
-        setPromotionPawn({ index: toIndex, player: piece.player as 'player1' | 'player2' });
-        return; // stop further move until promotion is handled
-      }
-    }
-
     // Valid move, perform it
     movePiece(fromIndex, toIndex, enPassantSquare as number | undefined);
   

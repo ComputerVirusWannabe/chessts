@@ -7,6 +7,7 @@ export type CapturedPiece = {
   name: string;
   color: string;
   player: 'player1' | 'player2' | null;
+  capturedBy?: 'player1' | 'player2';
 };
 
 type CapturedPiecesProps = {
@@ -15,14 +16,14 @@ type CapturedPiecesProps = {
 
 const CapturedPieces: React.FC<CapturedPiecesProps> = ({ capturedPieces }) => {
   return (
-    <div style={{ display: 'flex', gap: '5px' }}>
+    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
       {capturedPieces.map(piece => {
         // Determine which symbol set to use
         let symbol = piece.name[0].toUpperCase();
         if (piece.player === 'player1') {
-          symbol = pieceSymbolsBlack[piece.name] || symbol;
-        } else if (piece.player === 'player2') {
           symbol = pieceSymbolsWhite[piece.name] || symbol;
+        } else if (piece.player === 'player2') {
+          symbol = pieceSymbolsBlack[piece.name] || symbol;
         }
         return (
           <div

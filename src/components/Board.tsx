@@ -23,10 +23,6 @@ const Board: React.FC = () => {
     }
   };
 
-  // Separate captured pieces for each player
-  const player1Captured = capturedPieces.filter(p => p.player === 'player1');
-  const player2Captured = capturedPieces.filter(p => p.player === 'player2');
-
   // Determine orientation + index mapping
   let renderSquares = squares;
   let actualIndexFor = (i: number) => i;
@@ -45,21 +41,13 @@ const Board: React.FC = () => {
     actualIndexFor = i => i;
   }
 
-  // Captured rows
-  let topCaptured, bottomCaptured;
+  const bottomPlayer: 'player1' | 'player2' = gameMode === 'human-vs-ai' && humanPlayer === 'player2'
+    ? 'player2'
+    : 'player1';
+  const topPlayer: 'player1' | 'player2' = bottomPlayer === 'player1' ? 'player2' : 'player1';
 
-  if (gameMode === 'human-vs-human') {
-    topCaptured = player2Captured;   // black pieces on top
-    bottomCaptured = player1Captured; // white pieces bottom
-  } else {
-    if (humanPlayer === 'player1') {
-      topCaptured = player2Captured;
-      bottomCaptured = player1Captured;
-    } else {
-      topCaptured = player1Captured;
-      bottomCaptured = player2Captured;
-    }
-  }
+  const topCaptured = capturedPieces.filter(p => p.capturedBy === topPlayer);
+  const bottomCaptured = capturedPieces.filter(p => p.capturedBy === bottomPlayer);
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -95,31 +83,30 @@ const Board: React.FC = () => {
         {currentTurn === 'player1' ? "Player 1's Turn" : "Player 2's Turn"}
       </div>
 
-      {/* Captured pieces (top) */}
-      <CapturedPieces capturedPieces={topCaptured} />
-
-      {/* Chess board */}
-      <div className="board" style={{ margin: '10px auto' }}>
-        {renderSquares.map((sq, index) => {
-          const actualIndex = actualIndexFor(index);
-          return (
-            <Square
-              key={actualIndex}
-              index={actualIndex}
-              location={actualIndex}
-              id={sq.piece?.id || ''}
-              name={sq.piece?.name || ''}
-              color={sq.piece?.color || ''}
-              player={sq.piece?.player || null}
-              hasMoved={sq.piece?.hasMoved || false}
-            />
-          );
-        })}
-      </div>
-
-      {/* Captured pieces (bottom) */}
-      <div style={{ marginTop: '10px' }}>
+      <div className="board-area">
+        <div className="captured-row">
+          <CapturedPieces capturedPieces={topCaptured} />
+        </div>
+        <div className="board" style={{ margin: '10px auto' }}>
+          {renderSquares.map((sq, index) => {
+            const actualIndex = actualIndexFor(index);
+            return (
+              <Square
+                key={actualIndex}
+                index={actualIndex}
+                location={actualIndex}
+                id={sq.piece?.id || ''}
+                name={sq.piece?.name || ''}
+                color={sq.piece?.color || ''}
+                player={sq.piece?.player || null}
+                hasMoved={sq.piece?.hasMoved || false}
+              />
+            );
+          })}
+        </div>
+        <div className="captured-row">
         <CapturedPieces capturedPieces={bottomCaptured} />
+        </div>
       </div>
     </div>
   );

@@ -1,11 +1,10 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import Square from './Square';
 import StartGame from './StartGame';
 import { BoardContext } from '../context/board-context';
 import { ThemeContext } from '../context/ThemeContext';
 import CapturedPieces from './CapturedPieces';
 import '../styles/Board.css';
-import { useState } from 'react';
 
 
 const Board: React.FC = () => {

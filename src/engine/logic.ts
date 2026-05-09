@@ -87,19 +87,35 @@ export const filterLegalMoves = (
       return false;
     }
 
-    tempBoard[toIndex].piece = { ...tempBoard[fromIndex].piece!, location: toIndex };
-    tempBoard[fromIndex].piece = null;
+    const movingPiece = tempBoard[fromIndex].piece;
+    if (!movingPiece) {
+      return false;
+    }
+
+    let simulatedBoard = tempBoard.map((square, index) => {
+      if (index === fromIndex) {
+        return { piece: null };
+      }
+
+      if (index === toIndex) {
+        return { piece: { ...movingPiece, location: toIndex } };
+      }
+
+      return square;
+    });
 
     if (piece.name === 'pawn' && enPassantSquare !== undefined && toIndex === enPassantSquare && !squares[toIndex].piece) {
       const capturedIndex = piece.player === 'player1' ? toIndex + 8 : toIndex - 8;
-      tempBoard[capturedIndex].piece = null;
+      simulatedBoard = simulatedBoard.map((square, index) =>
+        index === capturedIndex ? { piece: null } : square
+      );
     }
 
-    const kingSquare = tempBoard.findIndex(
+    const kingSquare = simulatedBoard.findIndex(
       square => square.piece?.player === piece.player && square.piece.name === 'king'
     );
 
-    return !isSquareAttacked(kingSquare, opponent(piece.player as Player), tempBoard);
+    return !isSquareAttacked(kingSquare, opponent(piece.player as Player), simulatedBoard);
   });
 
 export const isKingInCheck = (player: Player, squares: SquareType[]): boolean => {

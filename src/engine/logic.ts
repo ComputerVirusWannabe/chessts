@@ -76,6 +76,17 @@ export const filterLegalMoves = (
 ): number[] =>
   pseudoMoves.filter(toIndex => {
     const tempBoard = squares.map(square => ({ piece: square.piece ? { ...square.piece } : null }));
+    if (
+      !Number.isInteger(fromIndex) ||
+      !Number.isInteger(toIndex) ||
+      fromIndex < 0 ||
+      fromIndex >= tempBoard.length ||
+      toIndex < 0 ||
+      toIndex >= tempBoard.length
+    ) {
+      return false;
+    }
+
     tempBoard[toIndex].piece = { ...tempBoard[fromIndex].piece!, location: toIndex };
     tempBoard[fromIndex].piece = null;
 

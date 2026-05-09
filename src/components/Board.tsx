@@ -100,7 +100,9 @@ const Board: React.FC = () => {
                 boardContext.importPgn(pgnText);
                 setPgnMessage('PGN imported successfully.');
               } catch (error) {
-                setPgnMessage(error instanceof Error ? error.message : 'Failed to import PGN.');
+                setPgnMessage(
+                  error instanceof Error ? error.message : 'Failed to import PGN. Please check the format and try again.'
+                );
               }
             }}
           >

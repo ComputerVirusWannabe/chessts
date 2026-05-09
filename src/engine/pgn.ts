@@ -32,7 +32,7 @@ const findMoveBySan = (snapshot: GameSnapshot, token: string): LegalMove => {
   const matchedMove = legalMoves.find(move => normalizeSan(move.san ?? '') === normalizedToken);
 
   if (!matchedMove) {
-    throw new Error(`Unable to match PGN move "${token}" on ply ${snapshot.moveHistory.length + 1}.`);
+    throw new Error(`Unable to match PGN move "${token}" at move ${snapshot.moveHistory.length + 1}.`);
   }
 
   return matchedMove;

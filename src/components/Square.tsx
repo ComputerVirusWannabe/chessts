@@ -1,13 +1,13 @@
 import React, { useContext } from 'react';
-import { BoardContext } from '../context/BoardContext';
+import { BoardContext } from '../context/board-context';
 import Piece from './Piece';
 import { ThemeContext } from '../context/ThemeContext';
-import { type PieceType } from '../context/BoardContext';
+import { type PieceType } from '../types/chess';
 
 type SquarePropsType = {
     index: number;
     //onPieceClick?: (id: string, location: number, paths: number[]) => void;
-  } & PieceType;
+  } & Partial<PieceType>;
   
 
   const Square: React.FC<SquarePropsType> = ({ index, id, name, color, player, hasMoved }) => {

@@ -1,5 +1,4 @@
-import { type SquareType, type PieceType } from '../context/BoardContext';
-import { type Player } from './engine';
+import { type PieceType, type Player, type SquareType } from '../types/chess';
 import { countMoves } from './engine';
 
 const PIECE_VALUE: Record<PieceType['name'], number> = {
@@ -29,7 +28,7 @@ function mirror(square: number): number {
 }
 
 function pieceSquareBonus(piece: PieceType, square: number): number {
-  let idx = piece.player === 'player2' ? mirror(square) : square;
+  const idx = piece.player === 'player2' ? mirror(square) : square;
 
   switch (piece.name) {
     case 'pawn': return PAWN_TABLE[idx];

@@ -1,10 +1,10 @@
-import { useContext } from 'react';
-import { BoardContext, type PieceType } from '../context/BoardContext';
+import type { PieceType, SquareType } from '../types/chess';
+
 export const generateSlidingMoves = (
   directions: number[],
   pos: number,
   player: string,
-  squares: { piece: PieceType | null }[]
+  squares: SquareType[]
 ): number[] => {
   const moves: number[] = [];
   const row = Math.floor(pos / 8);
@@ -17,18 +17,21 @@ export const generateSlidingMoves = (
       const targetRow = Math.floor(target / 8);
       const targetCol = target % 8;
 
-      if (dir === -1 || dir === 1) {
-        if (targetRow !== row) break;
+      if ((dir === -1 || dir === 1) && targetRow !== row) {
+        break;
       }
-      if (Math.abs(dir) === 7 || Math.abs(dir) === 9) {
-        if (Math.abs(targetRow - row) !== Math.abs(targetCol - col)) break;
+
+      if ((Math.abs(dir) === 7 || Math.abs(dir) === 9) && Math.abs(targetRow - row) !== Math.abs(targetCol - col)) {
+        break;
       }
 
       const targetPiece = squares[target]?.piece;
       if (!targetPiece) {
         moves.push(target);
       } else {
-        if (targetPiece.player !== player) moves.push(target);
+        if (targetPiece.player !== player) {
+          moves.push(target);
+        }
         break;
       }
 
@@ -42,25 +45,22 @@ export const generateSlidingMoves = (
 export const generatePseudoLegalMoves = (
   piece: PieceType,
   pos: number,
-  squares: { piece: PieceType | null }[],
+  squares: SquareType[],
   enPassantSquare?: number
 ): number[] => {
   const moves: number[] = [];
   const player = piece.player!;
-  const name = piece.name;
 
-  switch (name) {
+  switch (piece.name) {
     case 'pawn': {
       const dir = player === 'player1' ? -1 : 1;
       const row = Math.floor(pos / 8);
       const col = pos % 8;
 
-      // Forward moves
       const forwardOne = pos + dir * 8;
       if (forwardOne >= 0 && forwardOne < 64 && !squares[forwardOne].piece) {
         moves.push(forwardOne);
 
-        // Starting double move
         const startingRow = player === 'player1' ? 6 : 1;
         const forwardTwo = pos + dir * 16;
         if (row === startingRow && !squares[forwardTwo].piece) {
@@ -68,26 +68,26 @@ export const generatePseudoLegalMoves = (
         }
       }
 
-      // Diagonal captures
-      for (const dc of [-1, 1]) {
-        const targetCol = col + dc;
-        const diag = pos + dir * 8 + dc;
-        if (targetCol >= 0 && targetCol < 8 && diag >= 0 && diag < 64) {
-          const targetPiece = squares[diag]?.piece;
-          if (targetPiece && targetPiece.player !== player) {
-            moves.push(diag);
-          }
+      for (const deltaColumn of [-1, 1]) {
+        const targetCol = col + deltaColumn;
+        const diagonal = pos + dir * 8 + deltaColumn;
 
-          // En passant
-          const enPassantRow = player === 'player1' ? 3 : 4; // fifth rank
-          if (row === enPassantRow && diag === enPassantSquare) {
-              moves.push(diag);
-          }
+        if (targetCol < 0 || targetCol >= 8 || diagonal < 0 || diagonal >= 64) {
+          continue;
+        }
+
+        const targetPiece = squares[diagonal]?.piece;
+        if (targetPiece && targetPiece.player !== player) {
+          moves.push(diagonal);
+        }
+
+        const enPassantRow = player === 'player1' ? 3 : 4;
+        if (row === enPassantRow && diagonal === enPassantSquare) {
+          moves.push(diagonal);
         }
       }
       break;
     }
-
 
     case 'rook':
       moves.push(...generateSlidingMoves([-8, 8, -1, 1], pos, player, squares));
@@ -103,18 +103,29 @@ export const generatePseudoLegalMoves = (
 
     case 'knight': {
       const deltas = [
-        [2, 1], [2, -1], [-2, 1], [-2, -1],
-        [1, 2], [1, -2], [-1, 2], [-1, -2],
+        [2, 1],
+        [2, -1],
+        [-2, 1],
+        [-2, -1],
+        [1, 2],
+        [1, -2],
+        [-1, 2],
+        [-1, -2],
       ];
-      const r = Math.floor(pos / 8);
-      const c = pos % 8;
-      for (const [dr, dc] of deltas) {
-        const nr = r + dr;
-        const nc = c + dc;
-        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
-          const target = nr * 8 + nc;
-          const targetPiece = squares[target]?.piece;
-          if (!targetPiece || targetPiece.player !== player) moves.push(target);
+      const row = Math.floor(pos / 8);
+      const col = pos % 8;
+
+      for (const [deltaRow, deltaColumn] of deltas) {
+        const nextRow = row + deltaRow;
+        const nextColumn = col + deltaColumn;
+        if (nextRow < 0 || nextRow >= 8 || nextColumn < 0 || nextColumn >= 8) {
+          continue;
+        }
+
+        const target = nextRow * 8 + nextColumn;
+        const targetPiece = squares[target]?.piece;
+        if (!targetPiece || targetPiece.player !== player) {
+          moves.push(target);
         }
       }
       break;
@@ -122,16 +133,25 @@ export const generatePseudoLegalMoves = (
 
     case 'king': {
       const deltas = [-9, -8, -7, -1, 1, 7, 8, 9];
-      const kr = Math.floor(pos / 8);
-      const kc = pos % 8;
+      const row = Math.floor(pos / 8);
+      const col = pos % 8;
+
       for (const delta of deltas) {
         const target = pos + delta;
-        if (target < 0 || target >= 64) continue;
-        const tr = Math.floor(target / 8);
-        const tc = target % 8;
-        if (Math.abs(tr - kr) > 1 || Math.abs(tc - kc) > 1) continue;
+        if (target < 0 || target >= 64) {
+          continue;
+        }
+
+        const targetRow = Math.floor(target / 8);
+        const targetCol = target % 8;
+        if (Math.abs(targetRow - row) > 1 || Math.abs(targetCol - col) > 1) {
+          continue;
+        }
+
         const targetPiece = squares[target]?.piece;
-        if (!targetPiece || targetPiece.player !== player) moves.push(target);
+        if (!targetPiece || targetPiece.player !== player) {
+          moves.push(target);
+        }
       }
       break;
     }

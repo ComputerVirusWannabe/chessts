@@ -1,5 +1,5 @@
-import { type SquareType } from '../context/BoardContext';
-import { type Player, type Move, getAllLegalMoves, applyMove, hashBoard } from './engine';
+import { type Player, type SquareType } from '../types/chess';
+import { type Move, getAllLegalMoves, applyMove, hashBoard } from './engine';
 import { evaluate } from './evaluation';
 
 type TTEntry = {

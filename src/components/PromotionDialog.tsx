@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { BoardContext } from '../context/BoardContext';
+import { BoardContext } from '../context/board-context';
 
 type PromotionDialogProps = {
   onSelect: (pieceName: 'queen' | 'rook' | 'bishop' | 'knight') => void;

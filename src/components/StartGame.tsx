@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { BoardContext } from '../context/BoardContext';
+import { BoardContext } from '../context/board-context';
 import { useNavigate } from 'react-router-dom';
 
 const StartGame: React.FC = () => {

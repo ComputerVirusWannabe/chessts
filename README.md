@@ -4,7 +4,7 @@ A fully playable chess application built from scratch by using React and TypeScr
 - a custom chess engine,
 - legal move validation,
 - AI opponent support,
-- polished interactive UI,
+- interactive UI,
 - and full implementation of official chess rules.
 
 ## Live Demo
@@ -54,6 +54,15 @@ The project separates:
 - and UI rendering
 
 to keep the codebase modular and maintainable.
+
+The application is divided into several core systems:
+
+- **Move Generation** — Generates pseudo-legal and legal moves
+- **Rule Validation** — Handles check, checkmate, castling, and en passant
+- **Search Engine** — Implements minimax with alpha-beta pruning
+- **Evaluation Engine** — Scores board states heuristically
+- **UI Layer** — Handles rendering and player interaction
+- **State Management** — Synchronizes board updates and turn logic
 
 ---
 
@@ -116,7 +125,7 @@ The long-term goal is to continue improving the engine strength and overall poli
 # Known Issues
 
 - Checkmate notification may occasionally trigger too early when the AI wins.
-- The engine is considered too weak and has only one level of difficulty.
+- The engine has only one level of difficulty.
 - Unable to undo/redo moves.
 - Not yet able to save the state of the board when the browser/game is refreshed.
 

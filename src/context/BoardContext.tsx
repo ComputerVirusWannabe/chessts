@@ -5,7 +5,7 @@ import { BoardContext } from './board-context';
 import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory, cloneSquares, createInitialGameSnapshot, createInitialSquares } from '../engine/boardState';
 import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
-import type { GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
+import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const initialSnapshot = useMemo(() => createInitialGameSnapshot(), []);
@@ -17,6 +17,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [enPassantSquare, setEnPassantSquare] = useState<number | null>(initialSnapshot.enPassantSquare);
   const [lastMove, setLastMove] = useState(() => cloneLastMove(initialSnapshot.lastMove));
   const [humanPlayer, setHumanPlayer] = useState<Player | null>(null);
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const [currentTurn, setCurrentTurn] = useState<Player>(initialSnapshot.currentTurn);
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [kingInCheckSquare, setKingInCheckSquare] = useState<number | null>(initialSnapshot.kingInCheckSquare);
@@ -136,31 +138,50 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 
   useEffect(() => {
-    if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn || isNavigatingHistory) {
+    if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn || isNavigatingHistory || gameOver) {
+      setIsAiThinking(false);
       return;
     }
 
     const aiPlayer: Player = humanPlayer === 'player1' ? 'player2' : 'player1';
     if (currentTurn !== aiPlayer) {
+      setIsAiThinking(false);
       return;
     }
 
+    const depthByDifficulty: Record<AIDifficulty, number> = {
+      easy: 1,
+      medium: 2,
+      hard: 3,
+    };
+
+    setIsAiThinking(true);
+
     const timerId = setTimeout(() => {
-      const move = chooseBestMove(squares, aiPlayer, 3);
-      if (!move) {
-        return;
+      try {
+        const move = chooseBestMove(squares, aiPlayer, depthByDifficulty[aiDifficulty]);
+        if (!move) {
+          return;
+        }
+
+        finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
+      } finally {
+        setIsAiThinking(false);
       }
+    }, 60);
 
-      finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
-    }, 0);
-
-    return () => clearTimeout(timerId);
-  }, [currentTurn, finishMove, gameMode, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
+    return () => {
+      clearTimeout(timerId);
+      setIsAiThinking(false);
+    };
+  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();
     restoreSnapshot(snapshot);
     setHumanPlayer(null);
+    setAiDifficulty('medium');
+    setIsAiThinking(false);
     setGameMode(null);
     setHistorySnapshots([cloneGameSnapshot(snapshot)]);
     setHistoryIndex(0);
@@ -260,6 +281,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       restoreSnapshot(latestSnapshot);
       setGameMode('human-vs-human');
       setHumanPlayer(null);
+      setIsAiThinking(false);
       setHistorySnapshots(importedSnapshots.map(snapshot => cloneGameSnapshot(snapshot)));
       setHistoryIndex(importedSnapshots.length - 1);
       setGameOver(false);
@@ -347,6 +369,9 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         promotePawn,
         humanPlayer,
         setHumanPlayer,
+        aiDifficulty,
+        setAiDifficulty,
+        isAiThinking,
         setGameMode,
         gameMode,
         createInitialSquares,

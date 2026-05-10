@@ -180,12 +180,14 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     let steps = 1;
     if (gameMode === 'human-vs-ai' && humanPlayer) {
+      let targetIndex = historyIndex - 1;
       for (let index = historyIndex - 1; index >= 0; index -= 1) {
-        steps = historyIndex - index;
+        targetIndex = index;
         if (historySnapshots[index].currentTurn === humanPlayer || index === 0) {
           break;
         }
       }
+      steps = historyIndex - targetIndex;
     }
 
     const nextIndex = Math.max(0, historyIndex - steps);
@@ -218,12 +220,14 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     let steps = 1;
     if (gameMode === 'human-vs-ai' && humanPlayer) {
+      let targetIndex = historyIndex + 1;
       for (let index = historyIndex + 1; index < historySnapshots.length; index += 1) {
-        steps = index - historyIndex;
+        targetIndex = index;
         if (historySnapshots[index].currentTurn === humanPlayer || index === historySnapshots.length - 1) {
           break;
         }
       }
+      steps = targetIndex - historyIndex;
     }
 
     const nextIndex = Math.min(

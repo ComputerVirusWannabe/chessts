@@ -1,7 +1,8 @@
 .board-area {
-  width: 90%;
-  max-width: 600px;
-  margin: 0 auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .captured-row {
@@ -79,14 +80,20 @@
 }
 
 .ai-thinking-indicator {
-  margin: 0 auto 12px;
-  max-width: 560px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #93c5fd;
-  background-color: #dbeafe;
-  color: #1e3a8a;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.75);
+  color: white;
   font-weight: 600;
+  font-size: 20px;
+  white-space: nowrap;
+  box-shadow: 0 0 12px rgba(255,255,255,0.2);
+  animation: pulse 1.5s infinite;
 }
 
 .thinking-dots span {

@@ -11,6 +11,8 @@ import type {
 
 export type BoardContextType = {
   squares: SquareType[];
+  isCheck: boolean;
+  checkMessage: string | null;
   setSquares: Dispatch<SetStateAction<SquareType[]>>;
   selectedPieceId: string | null;
   highlightedSquares: number[];

@@ -27,6 +27,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [historyIndex, setHistoryIndex] = useState(0);
   const [isNavigatingHistory, setIsNavigatingHistory] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const isCheck = kingInCheckSquare !== null;
+  const checkMessage = isCheck ? "King is in check!" : null;
 
   const currentSnapshot = useMemo<GameSnapshot>(
     () => ({
@@ -297,6 +299,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       value={{
         squares,
         setSquares,
+        isCheck,
+        checkMessage,
         selectedPieceId,
         highlightedSquares,
         setHighlightedSquares,

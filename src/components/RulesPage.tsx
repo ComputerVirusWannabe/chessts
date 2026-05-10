@@ -16,12 +16,13 @@ const RulesPage: React.FC = () => {
         <li>Rooks move any number of squares horizontally or vertically.</li>
         <li>Knights move in an "L" shape: two squares in one direction, then one square perpendicular.</li>
         <li>Bishops move any number of squares diagonally.</li>
-        <li>The queen moves any number of squares in any direction.</li>
+        <li>The queen moves any number of squares horizontally, vertically, and diagonally.</li>
         <li>The king moves one square in any direction.</li>
-        <li>Castling: Move the king two squares towards a rook, then move that rook to the square the king crossed.</li>
-        <li>En passant: A special pawn capture under certain conditions.</li>
+        <li>Castling: Move the king two squares towards a rook, then that rook automatically moves to the square the king crossed.
+            This can only be done when the king has not moved.</li>
+        <li>En passant: A special rule allowing a pawn to capture an opponent's pawn that has just moved two squares forward, as if it had only moved one.</li>
         <li>Pawns promote to any piece (except king) upon reaching the last rank.</li>
-        <li>Check: The king is under threat. You must move out of check.</li>
+        <li>Check: The king is under threat. You must move it out of check before you can move any other pieces.</li>
         <li>Checkmate: The king is in check and cannot escape. The game ends. Once the game ends, undo/redo is disabled.</li>
         <li>Stalemate: The player to move has no legal moves and is not in check. The game is a draw.</li>
       </ul>
@@ -30,7 +31,8 @@ const RulesPage: React.FC = () => {
 
       <p>
         This app supports PGN (Portable Game Notation), a standard format used to store and share chess games.
-        It allows you to save, reload, and replay full games.
+        It allows you to save, reload, and replay full games. You can paste PGN from any source (Lichess, Chess.com, etc.). 
+        Headers, comments, and annotations are automatically ignored. Only the moves are used to reconstruct the game.
       </p>
 
       <h3>Exporting a Game</h3>

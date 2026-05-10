@@ -75,3 +75,24 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.check-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 60, 60, 0.95);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 14px;
+  animation: pulseWarning 1s infinite;
+  z-index: 1000;
+}
+
+@keyframes pulseWarning {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}

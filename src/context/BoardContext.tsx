@@ -8,6 +8,7 @@ import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
 const AI_MOVE_DELAY_MS = 300;
+const DEFAULT_AI_DIFFICULTY: AIDifficulty = 'medium';
 const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {
   easy: 1,
   medium: 2,
@@ -24,7 +25,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [enPassantSquare, setEnPassantSquare] = useState<number | null>(initialSnapshot.enPassantSquare);
   const [lastMove, setLastMove] = useState(() => cloneLastMove(initialSnapshot.lastMove));
   const [humanPlayer, setHumanPlayer] = useState<Player | null>(null);
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>(DEFAULT_AI_DIFFICULTY);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [currentTurn, setCurrentTurn] = useState<Player>(initialSnapshot.currentTurn);
   const [gameMode, setGameMode] = useState<GameMode>(null);
@@ -180,7 +181,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const snapshot = createInitialGameSnapshot();
     restoreSnapshot(snapshot);
     setHumanPlayer(null);
-    setAiDifficulty('medium');
+    setAiDifficulty(DEFAULT_AI_DIFFICULTY);
     setIsAiThinking(false);
     setGameMode(null);
     setHistorySnapshots([cloneGameSnapshot(snapshot)]);

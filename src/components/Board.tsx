@@ -11,7 +11,7 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, checkMessage } = boardContext;
   const themeContext = useContext(ThemeContext);
   const [pgnText, setPgnText] = useState('');
   const [pgnMessage, setPgnMessage] = useState('');
@@ -130,6 +130,22 @@ const Board: React.FC = () => {
       >
         {currentTurn === 'player1' ? "Player 1's Turn" : "Player 2's Turn"}
       </div>
+      {checkMessage ? (
+        <div
+          style={{
+            margin: '0 auto 12px',
+            maxWidth: '560px',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: '1px solid #f59e0b',
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            fontWeight: 600,
+          }}
+        >
+          {checkMessage}
+        </div>
+      ) : null}
 
       <div className="board-area">
         <div className="captured-row">

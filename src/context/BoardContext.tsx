@@ -6,13 +6,19 @@ import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory
 import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
-
+import {aiWorker} from '../ai/aiWorker.ts';
 const AI_MOVE_DELAY_MS = 300;
 const DEFAULT_AI_DIFFICULTY: AIDifficulty = 'medium';
 const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {
   easy: 1,
   medium: 2,
   hard: 3,
+};
+
+const AI_THINK_TIME_MS_BY_DIFFICULTY: Record<AIDifficulty, number> = {
+  easy: 300,
+  medium: 700,
+  hard: 1500,
 };
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -159,9 +165,22 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     setIsAiThinking(true);
 
+    aiWorker.postMessage({
+      board: squares,
+      player: currentTurn,
+      maxDepth: aiDifficulty === 'hard' ? 5 : 3,
+      maxTimeMs: 1000,
+    });
+  
+
     const timerId = setTimeout(() => {
       try {
-        const move = chooseBestMove(squares, aiPlayer, AI_DEPTH_BY_DIFFICULTY[aiDifficulty]);
+        const move = chooseBestMove(
+          squares,
+          aiPlayer,
+          AI_DEPTH_BY_DIFFICULTY[aiDifficulty],
+          AI_THINK_TIME_MS_BY_DIFFICULTY[aiDifficulty]
+        );
         if (!move) {
           return;
         }

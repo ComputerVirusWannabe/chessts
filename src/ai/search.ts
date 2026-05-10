@@ -8,6 +8,16 @@ type TTEntry = {
   bestMove?: Move;
 };
 
+type SearchContext = {
+  deadline: number;
+};
+
+type SearchResult = {
+  score: number;
+  best?: Move;
+  timedOut?: boolean;
+};
+
 const ORDER_VALUE: Record<string, number> = {
   pawn: 100,
   knight: 320,
@@ -17,25 +27,38 @@ const ORDER_VALUE: Record<string, number> = {
   king: 20000,
 };
 
-// Iterative Deepening 
+const isTimeout = (ctx: SearchContext) => Date.now() >= ctx.deadline;
+
+// Iterative deepening
+
 export function chooseBestMove(
   board: SquareType[],
   player: Player,
-  maxDepth = 4
+  maxDepth = 5,
+  maxTimeMs = 1000
 ): Move | null {
   const TT = new Map<number, TTEntry>();
+
+  const context: SearchContext = {
+    deadline: maxTimeMs > 0 ? Date.now() + maxTimeMs : Infinity,
+  };
 
   let bestMove: Move | null = null;
 
   for (let depth = 1; depth <= maxDepth; depth++) {
+    if (isTimeout(context)) break;
+
     const result = minimax(
       board,
       depth,
       -Infinity,
       Infinity,
       player,
-      TT
+      TT,
+      context
     );
+
+    if (result.timedOut) break;
 
     if (result.best) {
       bestMove = result.best;
@@ -45,8 +68,8 @@ export function chooseBestMove(
   return bestMove;
 }
 
+// Move ordering
 
-// Move ordering heuristic
 function scoreMove(board: SquareType[], mv: Move): number {
   const moving = board[mv.from].piece;
   const target = board[mv.to].piece;
@@ -59,7 +82,6 @@ function scoreMove(board: SquareType[], mv: Move): number {
     return ORDER_VALUE[target.name] * 10 - ORDER_VALUE[moving.name];
   }
 
-  // center bias
   const file = mv.to % 8;
   const rank = Math.floor(mv.to / 8);
   const centerDist =
@@ -68,13 +90,22 @@ function scoreMove(board: SquareType[], mv: Move): number {
   return -centerDist;
 }
 
-// Quiescence Search
+// Quiescence search
+
 function quiescence(
   board: SquareType[],
   alpha: number,
   beta: number,
-  player: Player
-) {
+  player: Player,
+  ctx: SearchContext
+): SearchResult {
+  if (isTimeout(ctx)) {
+    return {
+      score: evaluate(board, player),
+      timedOut: true,
+    };
+  }
+
   const standPat = evaluate(board, player);
 
   if (standPat >= beta) return { score: beta };
@@ -83,14 +114,21 @@ function quiescence(
   const moves = getAllLegalMoves(board, player).filter(m => m.isCapture);
 
   for (const mv of moves) {
+    if (isTimeout(ctx)) {
+      return { score: standPat, timedOut: true };
+    }
+
     const next = applyMove(board, mv);
-    const score =
-      -quiescence(
-        next,
-        -beta,
-        -alpha,
-        player === 'player1' ? 'player2' : 'player1'
-      ).score;
+
+    const result = quiescence(
+      next,
+      -beta,
+      -alpha,
+      player === 'player1' ? 'player2' : 'player1',
+      ctx
+    );
+
+    const score = -result.score;
 
     if (score >= beta) return { score: beta };
     if (score > alpha) alpha = score;
@@ -99,19 +137,28 @@ function quiescence(
   return { score: alpha };
 }
 
-// Minimax + Alpha Beta
+
+// Minimax
+
 function minimax(
   board: SquareType[],
   depth: number,
   alpha: number,
   beta: number,
   player: Player,
-  TT: Map<number, TTEntry>
-): { score: number; best?: Move } {
+  TT: Map<number, TTEntry>,
+  ctx: SearchContext
+): SearchResult {
+  if (isTimeout(ctx)) {
+    return {
+      score: evaluate(board, player),
+      timedOut: true,
+    };
+  }
+
   const key = hashBoard(board, player);
   const tt = TT.get(key);
 
-  // TT cutoff (correct + complete)
   if (tt && tt.depth >= depth) {
     return {
       score: tt.score,
@@ -120,7 +167,7 @@ function minimax(
   }
 
   if (depth === 0) {
-    return quiescence(board, alpha, beta, player);
+    return quiescence(board, alpha, beta, player, ctx);
   }
 
   const moves = getAllLegalMoves(board, player);
@@ -132,21 +179,18 @@ function minimax(
   let bestMove: Move | undefined;
   let bestScore = -Infinity;
 
-  
   // Move ordering
-  moves.sort((a, b) => {
-    const ttMove = tt?.bestMove;
+  moves.sort((a, b) => scoreMove(board, b) - scoreMove(board, a));
 
-    if (ttMove) {
-      if (a.from === ttMove.from && a.to === ttMove.to) return -1;
-      if (b.from === ttMove.from && b.to === ttMove.to) return 1;
+  for (const mv of moves) {
+    if (isTimeout(ctx)) {
+      return {
+        score: bestScore === -Infinity ? evaluate(board, player) : bestScore,
+        best: bestMove,
+        timedOut: true,
+      };
     }
 
-    return scoreMove(board, b) - scoreMove(board, a);
-  });
-
-  // Search
-  for (const mv of moves) {
     const next = applyMove(board, mv);
 
     const result = minimax(
@@ -155,8 +199,17 @@ function minimax(
       -beta,
       -alpha,
       player === 'player1' ? 'player2' : 'player1',
-      TT
+      TT,
+      ctx
     );
+
+    if (result.timedOut) {
+      return {
+        score: bestScore === -Infinity ? evaluate(board, player) : bestScore,
+        best: bestMove,
+        timedOut: true,
+      };
+    }
 
     const score = -result.score;
 
@@ -169,8 +222,6 @@ function minimax(
     if (alpha >= beta) break;
   }
 
-
-  // Store TT
   TT.set(key, {
     depth,
     score: bestScore,

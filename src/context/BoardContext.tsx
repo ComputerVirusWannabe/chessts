@@ -181,7 +181,9 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
           finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
         })
-        .catch(() => {})
+        .catch(error => {
+          console.error('AI worker failed to produce a move.', error);
+        })
         .finally(() => {
           if (!isCancelled) {
             setIsAiThinking(false);

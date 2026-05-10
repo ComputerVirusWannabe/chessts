@@ -94,11 +94,14 @@ Choose between:
 The chess engine currently uses:
 - Minimax search
 - Alpha-beta pruning
+
+Recent upgrades include:
 - Zobrist hashing
 - Transposition tables
-- Static board evaluation
+- Quiescence Search
+- Heuristic evaluation
 
-The AI is functional and competitive for many players, though stronger players (roughly 1500+ ELO) can still reliably defeat it.
+The AI is functional and competitive for many players.
 
 ---
 
@@ -128,18 +131,17 @@ The long-term goal is to continue improving the engine strength and overall poli
 # Known Issues
 
 - Checkmate notification may occasionally trigger too early when the AI wins.
-- The engine has only one level of difficulty.
-- Not yet able to save the state of the board when the browser/game is refreshed.
-
+- AI on hard difficulty may take noticeable time in sharp tactical positions due to deeper search depth.
 ---
 
 # Future Improvements
 
 Planned features include:
-- Engine statistics
-- Improved AI evaluation
+- Engine statistics and analysis tools
 - Multiplayer support
 - Mobile UI improvements
+- Stronger evaluation tuning
+- Web Worker-based AI threading (non-blocking search)
 
 ---
 

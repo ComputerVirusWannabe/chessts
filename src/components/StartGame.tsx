@@ -29,6 +29,23 @@ const StartGame: React.FC = () => {
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
           </select>
+          {aiDifficulty === 'hard' && (
+          <div
+            style={{
+              marginTop: '8px',
+              fontSize: '12px',
+              color: '#92400e',
+              backgroundColor: '#fef3c7',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              display: 'inline-block',
+              maxWidth: '320px',
+            }}
+          >
+            ⚠️ Hard mode may take a few seconds to think in complex positions.
+            The game is still running normally.
+          </div>
+        )}
         </div>
         <h2>Choose your side:</h2>
         <button

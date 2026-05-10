@@ -8,6 +8,11 @@ import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
 const AI_MOVE_DELAY_MS = 60;
+const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {
+  easy: 1,
+  medium: 2,
+  hard: 3,
+};
 
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const initialSnapshot = useMemo(() => createInitialGameSnapshot(), []);
@@ -151,17 +156,11 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return;
     }
 
-    const depthByDifficulty: Record<AIDifficulty, number> = {
-      easy: 1,
-      medium: 2,
-      hard: 3,
-    };
-
     setIsAiThinking(true);
 
     const timerId = setTimeout(() => {
       try {
-        const move = chooseBestMove(squares, aiPlayer, depthByDifficulty[aiDifficulty]);
+        const move = chooseBestMove(squares, aiPlayer, AI_DEPTH_BY_DIFFICULTY[aiDifficulty]);
         if (!move) {
           return;
         }
@@ -175,7 +174,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return () => {
       clearTimeout(timerId);
     };
-  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory, setIsAiThinking]);
+  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();

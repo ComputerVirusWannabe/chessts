@@ -52,6 +52,14 @@ const Board: React.FC = () => {
   const bottomCaptured = capturedPieces.filter(p => p.capturedBy === bottomPlayer);
   const isAiTurn = gameMode === 'human-vs-ai' && humanPlayer !== null && currentTurn !== humanPlayer;
 
+  const files = bottomPlayer === 'player1'
+    ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'];
+
+  const ranks = bottomPlayer === 'player1'
+      ? ['8', '7', '6', '5', '4', '3', '2', '1']
+      : ['1', '2', '3', '4', '5', '6', '7', '8'];
+
   return (
     <div style={{ textAlign: 'center' }}>
       {/* Theme toggle */}
@@ -158,31 +166,84 @@ const Board: React.FC = () => {
         </div>
       ) : null}
 
-      <div className="board-area">
-        <div className="captured-row">
-          <CapturedPieces capturedPieces={topCaptured} />
-        </div>
-        <div className="board" style={{ margin: '10px auto' }}>
-          {renderSquares.map((sq, index) => {
-            const actualIndex = actualIndexFor(index);
-            return (
-                <Square
-                  key={actualIndex}
-                  index={actualIndex}
-                  location={actualIndex}
-                  id={sq.piece?.id}
-                  name={sq.piece?.name}
-                  color={sq.piece?.color}
-                  player={sq.piece?.player || null}
-                  hasMoved={sq.piece?.hasMoved}
-                />
-            );
-          })}
-        </div>
-        <div className="captured-row">
-        <CapturedPieces capturedPieces={bottomCaptured} />
-        </div>
+<div className="board-area">
+  <div className="captured-row">
+    <CapturedPieces capturedPieces={topCaptured} />
+  </div>
+
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      margin: '10px auto',
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}
+    >
+      {/* Rank labels */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: 'repeat(8, 70px)',
+          alignItems: 'center',
+          fontWeight: 600,
+          color: '#666',
+        }}
+      >
+        {ranks.map(rank => (
+          <div key={rank}>{rank}</div>
+        ))}
       </div>
+
+      {/* Chess board */}
+      <div className="board">
+        {renderSquares.map((sq, index) => {
+          const actualIndex = actualIndexFor(index);
+
+          return (
+            <Square
+              key={actualIndex}
+              index={actualIndex}
+              location={actualIndex}
+              id={sq.piece?.id}
+              name={sq.piece?.name}
+              color={sq.piece?.color}
+              player={sq.piece?.player || null}
+              hasMoved={sq.piece?.hasMoved}
+            />
+          );
+        })}
+      </div>
+    </div>
+
+    {/* File labels */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(8, 70px)',
+        marginTop: '4px',
+        marginLeft: '24px',
+        fontWeight: 600,
+        color: '#666',
+      }}
+    >
+      {files.map(file => (
+        <div key={file}>{file}</div>
+      ))}
+    </div>
+  </div>
+
+  <div className="captured-row">
+    <CapturedPieces capturedPieces={bottomCaptured} />
+  </div>
+</div>
+
     </div>
   );
 };

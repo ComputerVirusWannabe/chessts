@@ -7,7 +7,7 @@ import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
-const AI_MOVE_DELAY_MS = 60;
+const AI_MOVE_DELAY_MS = 300;
 const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {
   easy: 1,
   medium: 2,

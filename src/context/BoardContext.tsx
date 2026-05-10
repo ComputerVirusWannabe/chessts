@@ -172,7 +172,6 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return () => {
       clearTimeout(timerId);
-      setIsAiThinking(false);
     };
   }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
 

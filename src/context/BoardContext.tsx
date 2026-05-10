@@ -6,7 +6,6 @@ import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory
 import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
-
 const AI_MOVE_DELAY_MS = 300;
 const DEFAULT_AI_DIFFICULTY: AIDifficulty = 'medium';
 const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {

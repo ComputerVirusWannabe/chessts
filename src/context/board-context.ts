@@ -1,5 +1,6 @@
 import { createContext, type Dispatch, type SetStateAction } from 'react';
 import type {
+  AIDifficulty,
   GameMode,
   MoveHistoryEntry,
   Player,
@@ -39,6 +40,9 @@ export type BoardContextType = {
   promotePawn: (pieceName: PromotionPieceName) => void;
   humanPlayer: Player | null;
   setHumanPlayer: Dispatch<SetStateAction<Player | null>>;
+  aiDifficulty: AIDifficulty;
+  setAiDifficulty: Dispatch<SetStateAction<AIDifficulty>>;
+  isAiThinking: boolean;
   setGameMode: Dispatch<SetStateAction<GameMode>>;
   gameMode: GameMode;
   createInitialSquares: () => SquareType[];

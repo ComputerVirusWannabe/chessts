@@ -5,6 +5,7 @@ export type PieceName = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen' | 'king'
 export type PromotionPieceName = 'queen' | 'rook' | 'bishop' | 'knight';
 
 export type GameMode = 'human-vs-human' | 'human-vs-ai' | null;
+export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
 export type PieceType = {
   id: string;

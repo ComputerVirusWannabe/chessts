@@ -11,7 +11,7 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, checkMessage } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, checkMessage, isAiThinking, aiDifficulty } = boardContext;
   const themeContext = useContext(ThemeContext);
   const [pgnText, setPgnText] = useState('');
   const [pgnMessage, setPgnMessage] = useState('');
@@ -50,6 +50,7 @@ const Board: React.FC = () => {
 
   const topCaptured = capturedPieces.filter(p => p.capturedBy === topPlayer);
   const bottomCaptured = capturedPieces.filter(p => p.capturedBy === bottomPlayer);
+  const isAiTurn = gameMode === 'human-vs-ai' && humanPlayer !== null && currentTurn !== humanPlayer;
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -144,6 +145,16 @@ const Board: React.FC = () => {
           }}
         >
           {checkMessage}
+        </div>
+      ) : null}
+      {isAiTurn && isAiThinking ? (
+        <div className="ai-thinking-indicator">
+          AI ({aiDifficulty}) is thinking
+          <span className="thinking-dots" aria-hidden="true">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
+          </span>
         </div>
       ) : null}
 

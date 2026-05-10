@@ -7,7 +7,7 @@ const StartGame: React.FC = () => {
   const navigate = useNavigate();
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { setHumanPlayer, setGameMode, gameMode } = boardContext;
+  const { setHumanPlayer, setGameMode, gameMode, aiDifficulty, setAiDifficulty } = boardContext;
 
   // Hide once mode is chosen
   if (gameMode !== null) return null; // hide StartGame once a mode is chosen
@@ -16,6 +16,20 @@ const StartGame: React.FC = () => {
     <div className="welcome-container" style={{ textAlign: 'center', marginTop: '20px' }}>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
         <h1>Welcome to Chess!</h1>
+        <div style={{ marginBottom: '16px' }}>
+          <label htmlFor="ai-difficulty" style={{ marginRight: '8px' }}>
+            AI Difficulty:
+          </label>
+          <select
+            id="ai-difficulty"
+            value={aiDifficulty}
+            onChange={(event) => setAiDifficulty(event.target.value as typeof aiDifficulty)}
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
         <h2>Choose your side:</h2>
         <button
           onClick={() => {

@@ -75,7 +75,7 @@ function quiescence(
   beta: number,
   player: Player
 ) {
-  let standPat = evaluate(board, player);
+  const standPat = evaluate(board, player);
 
   if (standPat >= beta) return { score: beta };
   if (standPat > alpha) alpha = standPat;

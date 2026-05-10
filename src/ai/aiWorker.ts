@@ -31,7 +31,11 @@ aiWorker.addEventListener('error', event => {
 });
 
 export function requestAiMove(request: Omit<AIWorkerRequest, 'requestId'>): Promise<Move | null> {
-  const requestId = ++nextRequestId;
+  nextRequestId = (nextRequestId + 1) % Number.MAX_SAFE_INTEGER;
+  if (nextRequestId === 0) {
+    nextRequestId = 1;
+  }
+  const requestId = nextRequestId;
 
   return new Promise((resolve, reject) => {
     pendingRequests.set(requestId, { resolve, reject });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import PromotionDialog from '../components/PromotionDialog';
 import { requestAiMove } from '../ai/aiWorker';
 import { BoardContext } from './board-context';
@@ -42,6 +42,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [historyIndex, setHistoryIndex] = useState(0);
   const [isNavigatingHistory, setIsNavigatingHistory] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const aiRequestGenerationRef = useRef(0);
   const isCheck = kingInCheckSquare !== null;
   const checkMessage = isCheck ? "King is in check!" : null;
 
@@ -163,7 +164,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     setIsAiThinking(true);
-    let isCancelled = false;
+    const requestGeneration = ++aiRequestGenerationRef.current;
 
     const timerId = setTimeout(() => {
       requestAiMove({
@@ -174,7 +175,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         enPassantSquare,
       })
         .then(move => {
-          if (isCancelled || !move) {
+          if (aiRequestGenerationRef.current !== requestGeneration || !move) {
             return;
           }
 
@@ -184,14 +185,16 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           console.error('AI worker failed to produce a move.', error);
         })
         .finally(() => {
-          if (!isCancelled) {
+          if (aiRequestGenerationRef.current === requestGeneration) {
             setIsAiThinking(false);
           }
         });
     }, AI_MOVE_DELAY_MS);
 
     return () => {
-      isCancelled = true;
+      if (aiRequestGenerationRef.current === requestGeneration) {
+        aiRequestGenerationRef.current += 1;
+      }
       clearTimeout(timerId);
     };
   }, [

@@ -120,7 +120,7 @@ export function getNextEnPassantSquare(board: SquareType[], mv: Move): number | 
     return null;
   }
 
-  return Math.abs(mv.to - mv.from) === 16 ? (mv.from + mv.to) / 2 : null;
+  return Math.abs(mv.to - mv.from) === 16 ? (mv.from + mv.to) >> 1 : null;
 }
 
 // --------------------

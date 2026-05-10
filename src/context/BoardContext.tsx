@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import PromotionDialog from '../components/PromotionDialog';
-import { chooseBestMove } from '../ai/search';
+import { requestAiMove } from '../ai/aiWorker';
 import { BoardContext } from './board-context';
 import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory, cloneSquares, createInitialGameSnapshot, createInitialSquares } from '../engine/boardState';
 import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
-import {aiWorker} from '../ai/aiWorker.ts';
+
 const AI_MOVE_DELAY_MS = 300;
 const DEFAULT_AI_DIFFICULTY: AIDifficulty = 'medium';
 const AI_DEPTH_BY_DIFFICULTY: Record<AIDifficulty, number> = {
@@ -164,37 +164,47 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     setIsAiThinking(true);
-
-    aiWorker.postMessage({
-      board: squares,
-      player: currentTurn,
-      maxDepth: aiDifficulty === 'hard' ? 5 : 3,
-      maxTimeMs: 1000,
-    });
-  
+    let isCancelled = false;
 
     const timerId = setTimeout(() => {
-      try {
-        const move = chooseBestMove(
-          squares,
-          aiPlayer,
-          AI_DEPTH_BY_DIFFICULTY[aiDifficulty],
-          AI_THINK_TIME_MS_BY_DIFFICULTY[aiDifficulty]
-        );
-        if (!move) {
-          return;
-        }
+      requestAiMove({
+        board: squares,
+        player: aiPlayer,
+        maxDepth: AI_DEPTH_BY_DIFFICULTY[aiDifficulty],
+        maxTimeMs: AI_THINK_TIME_MS_BY_DIFFICULTY[aiDifficulty],
+        enPassantSquare,
+      })
+        .then(move => {
+          if (isCancelled || !move) {
+            return;
+          }
 
-        finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
-      } finally {
-        setIsAiThinking(false);
-      }
+          finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!isCancelled) {
+            setIsAiThinking(false);
+          }
+        });
     }, AI_MOVE_DELAY_MS);
 
     return () => {
+      isCancelled = true;
       clearTimeout(timerId);
     };
-  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
+  }, [
+    aiDifficulty,
+    currentTurn,
+    enPassantSquare,
+    finishMove,
+    gameMode,
+    gameOver,
+    humanPlayer,
+    promotionPawn,
+    squares,
+    isNavigatingHistory
+  ]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();

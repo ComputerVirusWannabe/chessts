@@ -1,5 +1,6 @@
 import { type Player, type SquareType } from '../types/chess';
-import { type Move, getAllLegalMoves, applyMove, hashBoard } from './engine';
+import { isKingInCheck, opponent } from '../engine/logic';
+import { type Move, getAllLegalMoves, applyMove, getNextEnPassantSquare, hashBoard } from './engine';
 import { evaluate } from './evaluation';
 
 type TTEntry = {
@@ -35,7 +36,8 @@ export function chooseBestMove(
   board: SquareType[],
   player: Player,
   maxDepth = 5,
-  maxTimeMs = 1000
+  maxTimeMs = 1000,
+  enPassantSquare?: number | null
 ): Move | null {
   const TT = new Map<number, TTEntry>();
 
@@ -54,6 +56,7 @@ export function chooseBestMove(
       -Infinity,
       Infinity,
       player,
+      enPassantSquare ?? null,
       TT,
       context
     );
@@ -97,6 +100,7 @@ function quiescence(
   alpha: number,
   beta: number,
   player: Player,
+  enPassantSquare: number | null,
   ctx: SearchContext
 ): SearchResult {
   if (isTimeout(ctx)) {
@@ -111,7 +115,7 @@ function quiescence(
   if (standPat >= beta) return { score: beta };
   if (standPat > alpha) alpha = standPat;
 
-  const moves = getAllLegalMoves(board, player).filter(m => m.isCapture);
+  const moves = getAllLegalMoves(board, player, enPassantSquare).filter(m => m.isCapture);
 
   for (const mv of moves) {
     if (isTimeout(ctx)) {
@@ -119,12 +123,14 @@ function quiescence(
     }
 
     const next = applyMove(board, mv);
+    const nextEnPassantSquare = getNextEnPassantSquare(board, mv);
 
     const result = quiescence(
       next,
       -beta,
       -alpha,
-      player === 'player1' ? 'player2' : 'player1',
+      opponent(player),
+      nextEnPassantSquare,
       ctx
     );
 
@@ -146,6 +152,7 @@ function minimax(
   alpha: number,
   beta: number,
   player: Player,
+  enPassantSquare: number | null,
   TT: Map<number, TTEntry>,
   ctx: SearchContext
 ): SearchResult {
@@ -156,7 +163,7 @@ function minimax(
     };
   }
 
-  const key = hashBoard(board, player);
+  const key = hashBoard(board, player, enPassantSquare);
   const tt = TT.get(key);
 
   if (tt && tt.depth >= depth) {
@@ -167,13 +174,13 @@ function minimax(
   }
 
   if (depth === 0) {
-    return quiescence(board, alpha, beta, player, ctx);
+    return quiescence(board, alpha, beta, player, enPassantSquare, ctx);
   }
 
-  const moves = getAllLegalMoves(board, player);
+  const moves = getAllLegalMoves(board, player, enPassantSquare);
 
   if (moves.length === 0) {
-    return { score: -Infinity };
+    return { score: isKingInCheck(player, board) ? -Infinity : 0 };
   }
 
   let bestMove: Move | undefined;
@@ -192,13 +199,15 @@ function minimax(
     }
 
     const next = applyMove(board, mv);
+    const nextEnPassantSquare = getNextEnPassantSquare(board, mv);
 
     const result = minimax(
       next,
       depth - 1,
       -beta,
       -alpha,
-      player === 'player1' ? 'player2' : 'player1',
+      opponent(player),
+      nextEnPassantSquare,
       TT,
       ctx
     );

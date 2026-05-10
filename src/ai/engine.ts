@@ -9,6 +9,7 @@ export type Move = {
   promote?: PromotionPieceName;
   isCapture?: boolean;
   isPromotion?: boolean;
+  isEnPassant?: boolean;
 };
 
 const PIECES: PieceType['name'][] = ['pawn','knight','bishop','rook','queen','king'];
@@ -34,12 +35,18 @@ export function getAllLegalMoves(
       pseudo.push(...calculateCastlingMoves(piece, board));
     }
 
-    const legal = Engine.filterLegalMoves(piece, i, pseudo, board);
+    const legal = Engine.filterLegalMoves(piece, i, pseudo, board, enPassantSquare ?? undefined);
 
     for (const to of legal) {
       const target = board[to].piece;
+      const isEnPassant =
+        piece.name === 'pawn' &&
+        enPassantSquare !== null &&
+        enPassantSquare !== undefined &&
+        to === enPassantSquare &&
+        !target;
 
-      const isCapture = !!target;
+      const isCapture = !!target || isEnPassant;
 
       const isPromotion =
         piece.name === 'pawn' &&
@@ -51,6 +58,7 @@ export function getAllLegalMoves(
         to,
         isCapture,
         isPromotion,
+        isEnPassant,
         promote: isPromotion ? 'queen' : undefined,
       });
     }
@@ -74,6 +82,11 @@ export function applyMove(board: SquareType[], mv: Move): SquareType[] {
   const moving = next[mv.from].piece!;
   next[mv.to].piece = { ...moving, location: mv.to, hasMoved: true };
   next[mv.from].piece = null;
+
+  if (mv.isEnPassant) {
+    const capturedIndex = moving.player === 'player1' ? mv.to + 8 : mv.to - 8;
+    next[capturedIndex].piece = null;
+  }
 
   if (mv.isPromotion) {
     next[mv.to].piece!.name = mv.promote ?? 'queen';
@@ -102,6 +115,15 @@ export function applyMove(board: SquareType[], mv: Move): SquareType[] {
   return next;
 }
 
+export function getNextEnPassantSquare(board: SquareType[], mv: Move): number | null {
+  const moving = board[mv.from].piece;
+  if (!moving || moving.name !== 'pawn') {
+    return null;
+  }
+
+  return Math.abs(mv.to - mv.from) === 16 ? (mv.from + mv.to) / 2 : null;
+}
+
 // --------------------
 // Zobrist Hashing
 // --------------------
@@ -123,6 +145,7 @@ const zobristTable: number[][][] = (() => {
 })();
 
 const SIDE_KEY = (Math.random() * 0x100000000) >>> 0;
+const EP_FILE_KEYS = Array.from({ length: 8 }, () => (Math.random() * 0x100000000) >>> 0);
 
 function pieceIndex(name: PieceType['name']) {
   return PIECES.indexOf(name);
@@ -131,7 +154,11 @@ function colorIndex(color: Player) {
   return COLORS.indexOf(color);
 }
 
-export function hashBoard(board: SquareType[], sideToMove: Player): number {
+export function hashBoard(
+  board: SquareType[],
+  sideToMove: Player,
+  enPassantSquare?: number | null
+): number {
   let h = 0 >>> 0;
 
   for (let i = 0; i < 64; i++) {
@@ -147,6 +174,9 @@ export function hashBoard(board: SquareType[], sideToMove: Player): number {
   }
 
   if (sideToMove === 'player1') h ^= SIDE_KEY;
+  if (enPassantSquare !== null && enPassantSquare !== undefined) {
+    h ^= EP_FILE_KEYS[enPassantSquare % 8];
+  }
 
   return h >>> 0;
 }

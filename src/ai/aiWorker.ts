@@ -1,15 +1,35 @@
-import { chooseBestMove } from './search';
+import type { Move } from './engine';
+import type { AIWorkerRequest, AIWorkerResponse } from './workerTypes';
 
-self.onmessage = (event) => {
-  const { board, player, maxDepth, maxTimeMs } = event.data;
+export const aiWorker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 
-  const move = chooseBestMove(board, player, maxDepth, maxTimeMs);
+let nextRequestId = 0;
 
-  self.postMessage(move);
-};
+export function requestAiMove(request: Omit<AIWorkerRequest, 'requestId'>): Promise<Move | null> {
+  const requestId = ++nextRequestId;
 
-export const aiWorker = new Worker(
-    new URL('../engine/aiWorker.ts', import.meta.url),
-    { type: 'module' }
-  );
+  return new Promise((resolve, reject) => {
+    const handleMessage = (event: MessageEvent<AIWorkerResponse>) => {
+      if (event.data.requestId !== requestId) {
+        return;
+      }
 
+      cleanup();
+      resolve(event.data.move);
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      cleanup();
+      reject(new Error(event.message || 'AI worker failed.'));
+    };
+
+    const cleanup = () => {
+      aiWorker.removeEventListener('message', handleMessage);
+      aiWorker.removeEventListener('error', handleError);
+    };
+
+    aiWorker.addEventListener('message', handleMessage);
+    aiWorker.addEventListener('error', handleError);
+    aiWorker.postMessage({ ...request, requestId });
+  });
+}

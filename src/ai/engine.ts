@@ -41,8 +41,7 @@ export function getAllLegalMoves(
       const target = board[to].piece;
       const isEnPassant =
         piece.name === 'pawn' &&
-        enPassantSquare !== null &&
-        enPassantSquare !== undefined &&
+        enPassantSquare != null &&
         to === enPassantSquare &&
         !target;
 
@@ -174,7 +173,7 @@ export function hashBoard(
   }
 
   if (sideToMove === 'player1') h ^= SIDE_KEY;
-  if (enPassantSquare !== null && enPassantSquare !== undefined) {
+  if (enPassantSquare != null) {
     h ^= EP_FILE_KEYS[enPassantSquare % 8];
   }
 

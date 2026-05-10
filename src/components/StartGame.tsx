@@ -46,7 +46,7 @@ const StartGame: React.FC = () => {
               }}
             >
               <strong>Hard mode notice:</strong> The AI may take a few seconds to move in complex positions.
-              This is expected behavior and does not affect game performance.
+              Please be patient even if the page seemingly becomes unresponsive (it's not actually freezing).
             </div>
           )}
         </div>

@@ -25,6 +25,8 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [pendingPromotionMove, setPendingPromotionMove] = useState<{ from: number; to: number } | null>(null);
   const [historySnapshots, setHistorySnapshots] = useState<GameSnapshot[]>(() => [cloneGameSnapshot(initialSnapshot)]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [isNavigatingHistory, setIsNavigatingHistory] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
 
   const currentSnapshot = useMemo<GameSnapshot>(
     () => ({
@@ -96,8 +98,10 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setTimeout(() => {
         if (isCheckmate) {
           alert(`${snapshot.currentTurn} is checkmated!`);
+          setGameOver(true);
         } else if (isStalemate) {
           alert('Stalemate!');
+          setGameOver(true);
         }
       }, 0);
     },
@@ -130,7 +134,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 
   useEffect(() => {
-    if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn) {
+    if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn || isNavigatingHistory) {
       return;
     }
 
@@ -149,7 +153,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, 0);
 
     return () => clearTimeout(timerId);
-  }, [currentTurn, finishMove, gameMode, humanPlayer, promotionPawn, squares]);
+  }, [currentTurn, finishMove, gameMode, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();
@@ -161,24 +165,63 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [restoreSnapshot]);
 
   const undoMove = useCallback(() => {
+    if (gameOver) {
+      return;
+    }
+  
     if (historyIndex === 0) {
       return;
     }
-
-    const nextIndex = historyIndex - 1;
+  
+    setIsNavigatingHistory(true);
+  
+    const steps = gameMode === 'human-vs-ai' ? 2 : 1;
+    const nextIndex = Math.max(0, historyIndex - steps);
+  
     restoreSnapshot(historySnapshots[nextIndex]);
     setHistoryIndex(nextIndex);
-  }, [historyIndex, historySnapshots, restoreSnapshot]);
+  
+    setTimeout(() => {
+      setIsNavigatingHistory(false);
+    }, 0);
+  }, [
+    gameOver,
+    gameMode,
+    historyIndex,
+    historySnapshots,
+    restoreSnapshot
+  ]);
 
   const redoMove = useCallback(() => {
+    if (gameOver) {
+      return;
+    }
+  
     if (historyIndex >= historySnapshots.length - 1) {
       return;
     }
-
-    const nextIndex = historyIndex + 1;
+  
+    setIsNavigatingHistory(true);
+  
+    const steps = gameMode === 'human-vs-ai' ? 2 : 1;
+    const nextIndex = Math.min(
+      historySnapshots.length - 1,
+      historyIndex + steps
+    );
+  
     restoreSnapshot(historySnapshots[nextIndex]);
     setHistoryIndex(nextIndex);
-  }, [historyIndex, historySnapshots, restoreSnapshot]);
+  
+    setTimeout(() => {
+      setIsNavigatingHistory(false);
+    }, 0);
+  }, [
+    gameOver,
+    gameMode,
+    historyIndex,
+    historySnapshots,
+    restoreSnapshot
+  ]);
 
   const exportCurrentPgn = useCallback(() => exportPgn(currentSnapshot), [currentSnapshot]);
 

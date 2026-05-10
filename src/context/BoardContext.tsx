@@ -7,6 +7,8 @@ import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { exportPgn, importPgn as importPgnSnapshots } from '../engine/pgn';
 import type { AIDifficulty, GameMode, GameSnapshot, Player, PromotionPieceName } from '../types/chess';
 
+const AI_MOVE_DELAY_MS = 60;
+
 export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const initialSnapshot = useMemo(() => createInitialGameSnapshot(), []);
 
@@ -168,12 +170,12 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       } finally {
         setIsAiThinking(false);
       }
-    }, 60);
+    }, AI_MOVE_DELAY_MS);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
+  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory, setIsAiThinking]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();

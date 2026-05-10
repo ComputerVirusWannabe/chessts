@@ -39,22 +39,36 @@ function pieceSquareBonus(piece: PieceType, square: number): number {
 export function evaluate(board: SquareType[], forPlayer: Player): number {
   let score = 0;
 
+  let mobilityBonus = 0;
+  let kingSafetyPenalty = 0;
+
+  const enemy = forPlayer === 'player1' ? 'player2' : 'player1';
+
   for (let i = 0; i < 64; i++) {
     const p = board[i].piece;
     if (!p) continue;
 
     const val = PIECE_VALUE[p.name];
 
+    // material
     score += p.player === forPlayer ? val : -val;
+
+    // positional
     score += pieceSquareBonus(p, i);
   }
 
-  // small mobility bonus
-  const mobility =
+  // mobility (done once, not per piece)
+  mobilityBonus =
     countMoves(board, forPlayer) -
-    countMoves(board, forPlayer === 'player1' ? 'player2' : 'player1');
+    countMoves(board, enemy);
 
-  score += 5 * mobility;
+  score += 5 * mobilityBonus;
+
+  // king safety (now correct placement)
+  const enemyMoves = countMoves(board, enemy);
+  kingSafetyPenalty = enemyMoves * 2;
+
+  score -= kingSafetyPenalty;
 
   return score;
 }

@@ -3,7 +3,7 @@ import { hashBoard } from './engine';
 import { evaluate } from './evaluation';
 import { applyLegalMove, getLegalMoves } from '../engine/game';
 import { getBookMove } from './book';
-import { isSquareAttacked, opponent } from '../engine/logic';
+import { isSquareAttacked } from '../engine/logic';
 
 type TTEntry = {
   depth: number;
@@ -26,20 +26,6 @@ export type BestMoveResult = {
   fromBook: boolean;
 };
 
-const hashSnapshot = (snapshot: GameSnapshot): string => {
-  const boardState = snapshot.squares
-    .map(square => {
-      const piece = square.piece;
-      if (!piece || !piece.player) {
-        return '_';
-      }
-      return `${piece.player}:${piece.name}:${piece.hasMoved ? 1 : 0}`;
-    })
-    .join('|');
-  const baseHash = hashBoard(snapshot.squares, snapshot.currentTurn);
-  return `${baseHash}:${snapshot.currentTurn}:${snapshot.enPassantSquare ?? '-'}:${boardState}`;
-};
-
 const isCurrentPlayerInCheck = (snapshot: GameSnapshot): boolean => {
   const kingSquare = snapshot.squares.findIndex(
     square => square.piece?.player === snapshot.currentTurn && square.piece.name === 'king'
@@ -49,7 +35,8 @@ const isCurrentPlayerInCheck = (snapshot: GameSnapshot): boolean => {
     return false;
   }
 
-  return isSquareAttacked(kingSquare, opponent(snapshot.currentTurn), snapshot.squares);
+  const attackingPlayer = snapshot.currentTurn === 'player1' ? 'player2' : 'player1';
+  return isSquareAttacked(kingSquare, attackingPlayer, snapshot.squares);
 };
 
 // Iterative Deepening
@@ -63,7 +50,7 @@ export function chooseBestMove(snapshot: GameSnapshot, maxDepth = 4): BestMoveRe
     };
   }
 
-  const TT = new Map<string, TTEntry>();
+  const TT = new Map<number, TTEntry>();
   let bestMove: LegalMove | null = null;
 
   for (let depth = 1; depth <= maxDepth; depth++) {
@@ -150,9 +137,9 @@ function minimax(
   depth: number,
   alpha: number,
   beta: number,
-  TT: Map<string, TTEntry>
+  TT: Map<number, TTEntry>
 ): { score: number; best?: LegalMove } {
-  const key = hashSnapshot(snapshot);
+  const key = hashBoard(snapshot.squares, snapshot.currentTurn);
   const tt = TT.get(key);
 
   // TT cutoff (correct + complete)

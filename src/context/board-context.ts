@@ -43,6 +43,7 @@ export type BoardContextType = {
   aiDifficulty: AIDifficulty;
   setAiDifficulty: Dispatch<SetStateAction<AIDifficulty>>;
   isAiThinking: boolean;
+  currentOpening: string | null;
   setGameMode: Dispatch<SetStateAction<GameMode>>;
   gameMode: GameMode;
   createInitialSquares: () => SquareType[];

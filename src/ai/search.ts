@@ -1,11 +1,14 @@
-import { type Player, type SquareType } from '../types/chess';
-import { type Move, getAllLegalMoves, applyMove, hashBoard } from './engine';
+import { type GameSnapshot, type LegalMove, type Player, type SquareType } from '../types/chess';
+import { hashBoard } from './engine';
 import { evaluate } from './evaluation';
+import { applyLegalMove, getLegalMoves } from '../engine/game';
+import { getBookMove } from './book';
+import { isSquareAttacked, opponent } from '../engine/logic';
 
 type TTEntry = {
   depth: number;
   score: number;
-  bestMove?: Move;
+  bestMove?: LegalMove;
 };
 
 const ORDER_VALUE: Record<string, number> = {
@@ -17,23 +20,58 @@ const ORDER_VALUE: Record<string, number> = {
   king: 20000,
 };
 
-// Iterative Deepening 
-export function chooseBestMove(
-  board: SquareType[],
-  player: Player,
-  maxDepth = 4
-): Move | null {
-  const TT = new Map<number, TTEntry>();
+export type BestMoveResult = {
+  move: LegalMove;
+  opening?: string;
+  fromBook: boolean;
+};
 
-  let bestMove: Move | null = null;
+const hashSnapshot = (snapshot: GameSnapshot): string => {
+  const boardState = snapshot.squares
+    .map(square => {
+      const piece = square.piece;
+      if (!piece || !piece.player) {
+        return '_';
+      }
+      return `${piece.player}:${piece.name}:${piece.hasMoved ? 1 : 0}`;
+    })
+    .join('|');
+  const baseHash = hashBoard(snapshot.squares, snapshot.currentTurn);
+  return `${baseHash}:${snapshot.currentTurn}:${snapshot.enPassantSquare ?? '-'}:${boardState}`;
+};
+
+const isCurrentPlayerInCheck = (snapshot: GameSnapshot): boolean => {
+  const kingSquare = snapshot.squares.findIndex(
+    square => square.piece?.player === snapshot.currentTurn && square.piece.name === 'king'
+  );
+
+  if (kingSquare < 0) {
+    return false;
+  }
+
+  return isSquareAttacked(kingSquare, opponent(snapshot.currentTurn), snapshot.squares);
+};
+
+// Iterative Deepening
+export function chooseBestMove(snapshot: GameSnapshot, maxDepth = 4): BestMoveResult | null {
+  const bookEntry = getBookMove(snapshot);
+  if (bookEntry) {
+    return {
+      move: bookEntry.move,
+      opening: bookEntry.opening,
+      fromBook: true,
+    };
+  }
+
+  const TT = new Map<string, TTEntry>();
+  let bestMove: LegalMove | null = null;
 
   for (let depth = 1; depth <= maxDepth; depth++) {
     const result = minimax(
-      board,
+      snapshot,
       depth,
       -Infinity,
       Infinity,
-      player,
       TT
     );
 
@@ -42,20 +80,27 @@ export function chooseBestMove(
     }
   }
 
-  return bestMove;
+  if (!bestMove) {
+    return null;
+  }
+
+  return {
+    move: bestMove,
+    fromBook: false,
+  };
 }
 
 
 // Move ordering heuristic
-function scoreMove(board: SquareType[], mv: Move): number {
+function scoreMove(board: SquareType[], mv: LegalMove): number {
   const moving = board[mv.from].piece;
-  const target = board[mv.to].piece;
+  const target = mv.captured ?? board[mv.to].piece;
 
   if (!moving) return -Infinity;
 
-  if (mv.isPromotion) return 10_000;
+  if (mv.promotion) return 10_000;
 
-  if (mv.isCapture && target) {
+  if (target) {
     return ORDER_VALUE[target.name] * 10 - ORDER_VALUE[moving.name];
   }
 
@@ -70,26 +115,26 @@ function scoreMove(board: SquareType[], mv: Move): number {
 
 // Quiescence Search
 function quiescence(
-  board: SquareType[],
+  snapshot: GameSnapshot,
   alpha: number,
-  beta: number,
-  player: Player
+  beta: number
 ) {
-  const standPat = evaluate(board, player);
+  const standPat = evaluate(snapshot.squares, snapshot.currentTurn);
 
   if (standPat >= beta) return { score: beta };
   if (standPat > alpha) alpha = standPat;
 
-  const moves = getAllLegalMoves(board, player).filter(m => m.isCapture);
+  const moves = getLegalMoves(snapshot.squares, snapshot.currentTurn, snapshot.enPassantSquare).filter(
+    move => Boolean(move.captured)
+  );
 
   for (const mv of moves) {
-    const next = applyMove(board, mv);
+    const { snapshot: nextSnapshot } = applyLegalMove(snapshot, mv, moves);
     const score =
       -quiescence(
-        next,
+        nextSnapshot,
         -beta,
-        -alpha,
-        player === 'player1' ? 'player2' : 'player1'
+        -alpha
       ).score;
 
     if (score >= beta) return { score: beta };
@@ -101,14 +146,13 @@ function quiescence(
 
 // Minimax + Alpha Beta
 function minimax(
-  board: SquareType[],
+  snapshot: GameSnapshot,
   depth: number,
   alpha: number,
   beta: number,
-  player: Player,
-  TT: Map<number, TTEntry>
-): { score: number; best?: Move } {
-  const key = hashBoard(board, player);
+  TT: Map<string, TTEntry>
+): { score: number; best?: LegalMove } {
+  const key = hashSnapshot(snapshot);
   const tt = TT.get(key);
 
   // TT cutoff (correct + complete)
@@ -120,16 +164,16 @@ function minimax(
   }
 
   if (depth === 0) {
-    return quiescence(board, alpha, beta, player);
+    return quiescence(snapshot, alpha, beta);
   }
 
-  const moves = getAllLegalMoves(board, player);
+  const moves = getLegalMoves(snapshot.squares, snapshot.currentTurn, snapshot.enPassantSquare);
 
   if (moves.length === 0) {
-    return { score: -Infinity };
+    return { score: isCurrentPlayerInCheck(snapshot) ? -Infinity : 0 };
   }
 
-  let bestMove: Move | undefined;
+  let bestMove: LegalMove | undefined;
   let bestScore = -Infinity;
 
   
@@ -137,24 +181,25 @@ function minimax(
   moves.sort((a, b) => {
     const ttMove = tt?.bestMove;
 
-    if (ttMove) {
-      if (a.from === ttMove.from && a.to === ttMove.to) return -1;
-      if (b.from === ttMove.from && b.to === ttMove.to) return 1;
-    }
+      if (ttMove) {
+        const sameAsA = a.from === ttMove.from && a.to === ttMove.to && a.promotion === ttMove.promotion;
+        const sameAsB = b.from === ttMove.from && b.to === ttMove.to && b.promotion === ttMove.promotion;
+        if (sameAsA) return -1;
+        if (sameAsB) return 1;
+      }
 
-    return scoreMove(board, b) - scoreMove(board, a);
+      return scoreMove(snapshot.squares, b) - scoreMove(snapshot.squares, a);
   });
 
   // Search
   for (const mv of moves) {
-    const next = applyMove(board, mv);
+    const { snapshot: nextSnapshot } = applyLegalMove(snapshot, mv, moves);
 
     const result = minimax(
-      next,
+      nextSnapshot,
       depth - 1,
       -beta,
       -alpha,
-      player === 'player1' ? 'player2' : 'player1',
       TT
     );
 

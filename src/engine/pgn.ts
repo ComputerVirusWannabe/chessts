@@ -23,7 +23,7 @@ const normalizeSan = (san: string) =>
     .replace(/\s+/g, '')
     .trim();
 
-const findMoveBySan = (snapshot: GameSnapshot, token: string): LegalMove => {
+export const findMoveBySan = (snapshot: GameSnapshot, token: string): LegalMove => {
   const legalMoves = getLegalMoves(snapshot.squares, snapshot.currentTurn, snapshot.enPassantSquare).map(move => ({
     ...move,
     san: buildSan(snapshot.squares, move, snapshot.enPassantSquare),

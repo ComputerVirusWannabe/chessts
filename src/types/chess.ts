@@ -7,6 +7,21 @@ export type PromotionPieceName = 'queen' | 'rook' | 'bishop' | 'knight';
 export type GameMode = 'human-vs-human' | 'human-vs-ai' | null;
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
+export type BookMove = {
+  san: string;
+  weight: number;
+};
+
+export type BookEntry = {
+  moves: BookMove[];
+  opening?: string;
+};
+
+export type BookPosition = {
+  key: string;
+  entry: BookEntry;
+};
+
 export type PieceType = {
   id: string;
   name: PieceName;

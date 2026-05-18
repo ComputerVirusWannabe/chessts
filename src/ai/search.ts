@@ -1,4 +1,4 @@
-import { type GameSnapshot, type LegalMove, type Player, type SquareType } from '../types/chess';
+import { type GameSnapshot, type LegalMove, type SquareType } from '../types/chess';
 import { hashBoard } from './engine';
 import { evaluate } from './evaluation';
 import { applyLegalMove, getLegalMoves } from '../engine/game';

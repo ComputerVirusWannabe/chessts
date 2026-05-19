@@ -11,7 +11,7 @@ const Board: React.FC = () => {
   const boardContext = useContext(BoardContext);
   if (!boardContext) throw new Error('BoardContext must be used within a BoardProvider');
 
-  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, checkMessage, isAiThinking, aiDifficulty } = boardContext;
+  const { humanPlayer, squares, capturedPieces, currentTurn, gameMode, checkMessage, isAiThinking, aiDifficulty, currentOpening } = boardContext;
   const themeContext = useContext(ThemeContext);
   const [pgnText, setPgnText] = useState('');
   const [pgnMessage, setPgnMessage] = useState('');
@@ -167,6 +167,11 @@ const Board: React.FC = () => {
       ) : null}
 
 <div className="board-area">
+  <div className="opening-panel">
+    <div className="opening-panel-title">Opening</div>
+    <div className="opening-panel-value">{currentOpening ?? 'Unknown'}</div>
+  </div>
+
   <div className="captured-row">
     <CapturedPieces capturedPieces={topCaptured} />
   </div>

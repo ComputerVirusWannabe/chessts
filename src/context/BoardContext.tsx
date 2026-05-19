@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import PromotionDialog from '../components/PromotionDialog';
 import { chooseBestMove } from '../ai/search';
+import { detectOpening } from '../ai/book';
 import { BoardContext } from './board-context';
 import { cloneCapturedPieces, cloneGameSnapshot, cloneLastMove, cloneMoveHistory, cloneSquares, createInitialGameSnapshot, createInitialSquares } from '../engine/boardState';
 import { applyLegalMove, getLegalMoves } from '../engine/game';
@@ -37,6 +38,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [historyIndex, setHistoryIndex] = useState(0);
   const [isNavigatingHistory, setIsNavigatingHistory] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [currentOpening, setCurrentOpening] = useState<string | null>(null);
   const isCheck = kingInCheckSquare !== null;
   const checkMessage = isCheck ? "King is in check!" : null;
 
@@ -146,6 +148,10 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 
   useEffect(() => {
+    setCurrentOpening(detectOpening(currentSnapshot));
+  }, [currentSnapshot]);
+
+  useEffect(() => {
     if (!humanPlayer || gameMode !== 'human-vs-ai' || promotionPawn || isNavigatingHistory || gameOver) {
       setIsAiThinking(false);
       return;
@@ -161,12 +167,16 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const timerId = setTimeout(() => {
       try {
-        const move = chooseBestMove(squares, aiPlayer, AI_DEPTH_BY_DIFFICULTY[aiDifficulty]);
-        if (!move) {
+        const result = chooseBestMove(currentSnapshot, AI_DEPTH_BY_DIFFICULTY[aiDifficulty]);
+        if (!result) {
           return;
         }
 
-        finishMove(move.from, move.to, move.isPromotion ? move.promote ?? 'queen' : undefined);
+        if (result.fromBook && result.opening) {
+          setCurrentOpening(result.opening);
+        }
+
+        finishMove(result.move.from, result.move.to, result.move.promotion);
       } finally {
         setIsAiThinking(false);
       }
@@ -175,7 +185,17 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return () => {
       clearTimeout(timerId);
     };
-  }, [aiDifficulty, currentTurn, finishMove, gameMode, gameOver, humanPlayer, promotionPawn, squares, isNavigatingHistory]);
+  }, [
+    aiDifficulty,
+    currentSnapshot,
+    currentTurn,
+    finishMove,
+    gameMode,
+    gameOver,
+    humanPlayer,
+    promotionPawn,
+    isNavigatingHistory,
+  ]);
 
   const resetGame = useCallback(() => {
     const snapshot = createInitialGameSnapshot();
@@ -187,6 +207,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setHistorySnapshots([cloneGameSnapshot(snapshot)]);
     setHistoryIndex(0);
     setGameOver(false);
+    setCurrentOpening(null);
   }, [restoreSnapshot]);
 
   const undoMove = useCallback(() => {
@@ -286,6 +307,7 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setHistorySnapshots(importedSnapshots.map(snapshot => cloneGameSnapshot(snapshot)));
       setHistoryIndex(importedSnapshots.length - 1);
       setGameOver(false);
+      setCurrentOpening(detectOpening(latestSnapshot));
     },
     [restoreSnapshot]
   );
@@ -370,11 +392,12 @@ export const BoardProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         promotePawn,
         humanPlayer,
         setHumanPlayer,
-        aiDifficulty,
-        setAiDifficulty,
-        isAiThinking,
-        setGameMode,
-        gameMode,
+         aiDifficulty,
+         setAiDifficulty,
+         isAiThinking,
+         currentOpening,
+         setGameMode,
+         gameMode,
         createInitialSquares,
         moveHistory,
         exportPgn: exportCurrentPgn,
